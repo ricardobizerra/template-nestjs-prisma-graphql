@@ -2,6 +2,12 @@ generator client {
   provider = "prisma-client-js"
 }
 
+generator nestgraphql {
+  provider = "node node_modules/prisma-nestjs-graphql"
+  output   = "../src/graphql/prisma-client"
+  reExport = None
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
