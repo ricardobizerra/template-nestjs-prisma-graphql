@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { User } from '@prisma/client';
-import { UserCreateInput } from 'src/graphql/prisma-client/user/user-create.input';
+import { UserCreateInput } from 'src/graphql/prisma-client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { selectObject } from 'src/utils/select-object';
 

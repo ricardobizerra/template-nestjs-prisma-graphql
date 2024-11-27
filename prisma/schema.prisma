@@ -3,9 +3,10 @@ generator client {
 }
 
 generator nestgraphql {
-  provider = "node node_modules/prisma-nestjs-graphql"
-  output   = "../src/graphql/prisma-client"
-  reExport = None
+  provider   = "node node_modules/prisma-nestjs-graphql"
+  output     = "../src/graphql/prisma-client"
+  reExport   = None
+  emitSingle = true
 }
 
 datasource db {

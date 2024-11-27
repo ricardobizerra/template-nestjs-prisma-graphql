@@ -2,6 +2,28 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+type UserCountAggregate {
+  id: Int!
+  email: Int!
+  password: Int!
+  name: Int!
+  _all: Int!
+}
+
+type UserMaxAggregate {
+  id: String
+  email: String
+  password: String
+  name: String
+}
+
+type UserMinAggregate {
+  id: String
+  email: String
+  password: String
+  name: String
+}
+
 type User {
   id: ID!
   email: String!
