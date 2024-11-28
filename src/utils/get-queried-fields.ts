@@ -4,28 +4,27 @@ export function getQueriedFields(
   info: GraphQLResolveInfo,
   fieldName: string,
 ): string[] {
-  const fields: string[] = [];
   const fieldNode = info.fieldNodes.find(
     (node) => node.name.value === fieldName,
   );
 
   if (!fieldNode || !fieldNode.selectionSet) {
-    return fields;
+    return [];
   }
 
-  const extractFields = (selectionSet: any): void => {
-    selectionSet.selections.forEach((selection: any) => {
-      if (selection.kind === 'Field') {
-        fields.push(selection.name.value);
-      } else if (
-        selection.kind === 'InlineFragment' &&
-        selection.selectionSet
-      ) {
-        extractFields(selection.selectionSet);
-      }
-    });
-  };
-
-  extractFields(fieldNode.selectionSet);
-  return fields;
+  return extractFields(fieldNode.selectionSet);
 }
+
+const extractFields = (selectionSet: any): string[] => {
+  const fields: string[] = [];
+
+  for (const selection of selectionSet.selections) {
+    if (selection.kind === 'Field') {
+      fields.push(selection.name.value);
+    } else if (selection.kind === 'InlineFragment' && selection.selectionSet) {
+      fields.push(...extractFields(selection.selectionSet));
+    }
+  }
+
+  return fields;
+};
