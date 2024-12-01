@@ -12,7 +12,7 @@ import { GraphQLResolveInfo } from 'graphql';
 import { getQueriedFields } from 'src/utils/get-queried-fields';
 import { UserCreateInput } from 'src/graphql/prisma-client';
 import { RedisService } from 'src/redis/redis.service';
-import { UserModel } from './model/user.model';
+import { UserModel } from './models/user.model';
 
 @Resolver(() => UserModel)
 export class UserResolver {
