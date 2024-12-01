@@ -13,9 +13,28 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_PORT=${POSTGRES_PORT}
       - POSTGRES_HOST=${POSTGRES_HOST}
+    command: ["postgres", "-c", "log_statement=all"]
     volumes:
       - postgres:/var/lib/postgresql/data
     ports:
       - '5432:5432'
+  redis:
+    container_name: ${APP_NAME}-redis
+    image: redis
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB=${REDIS_DB}
+      - REDIS_URL=${REDIS_URL}
+    volumes:
+      - redis:/data
+    ports:
+      - '6379:6379'
+
 volumes:
   postgres:
+  redis:
