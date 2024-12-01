@@ -24,21 +24,20 @@ type UserMinAggregate {
   name: String
 }
 
-type User {
+type UserModel {
   id: ID!
   email: String!
-  password: String!
   name: String!
 }
 
 type Query {
   health: String!
-  users: [User!]!
-  user(id: ID!): User!
+  users: [UserModel!]!
+  user(id: ID!): UserModel!
 }
 
 type Mutation {
-  createUser(data: UserCreateInput!): User!
+  createUser(data: UserCreateInput!): UserModel!
 }
 
 input UserCreateInput {
@@ -49,5 +48,5 @@ input UserCreateInput {
 }
 
 type Subscription {
-  userAdded: User!
+  userAdded: UserModel!
 }
