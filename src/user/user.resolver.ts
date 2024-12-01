@@ -1,8 +1,8 @@
-import { Args, ID, Info, Query, Resolver } from '@nestjs/graphql';
+import { Args, ID, Info, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { UserService } from './user.service';
 import { GraphQLResolveInfo } from 'graphql';
 import { getQueriedFields } from 'src/utils/get-queried-fields';
-import { User } from 'src/graphql/prisma-client';
+import { UserCreateInput, User } from 'src/graphql/prisma-client';
 
 @Resolver(() => User)
 export class UserResolver {
@@ -17,5 +17,10 @@ export class UserResolver {
   @Query(() => User, { name: 'user' })
   async findOne(@Args('id', { type: () => ID! }) id: string) {
     return this.userService.findOne(id);
+  }
+
+  @Mutation(() => User, { name: 'createUser' })
+  async create(@Args('data') data: UserCreateInput) {
+    return this.userService.create(data);
   }
 }
