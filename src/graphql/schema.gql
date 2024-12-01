@@ -36,3 +36,18 @@ type Query {
   users: [User!]!
   user(id: ID!): User!
 }
+
+type Mutation {
+  createUser(data: UserCreateInput!): User!
+}
+
+input UserCreateInput {
+  id: String
+  email: String!
+  password: String!
+  name: String!
+}
+
+type Subscription {
+  userAdded: User!
+}

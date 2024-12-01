@@ -34,6 +34,7 @@
     "@prisma/client": "5.22.0",
     "class-transformer": "^0.5.1",
     "graphql": "^16.9.0",
+    "graphql-redis-subscriptions": "^2.6.1",
     "graphql-type-json": "^0.3.2",
     "prisma-graphql-type-decimal": "^3.0.0",
     "reflect-metadata": "^0.2.0",

@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default';
 import { HealthModule } from './health/health.module';
 import { UserModule } from './user/user.module';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -19,6 +20,9 @@ import { UserModule } from './user/user.module';
       autoSchemaFile: join(process.cwd(), 'src/graphql/schema.gql'),
       plugins: [ApolloServerPluginLandingPageLocalDefault()],
       context: ({ req }) => ({ request: req }),
+      subscriptions: {
+        'graphql-ws': true,
+      },
     }),
     ConfigModule.forRoot({
       validate: (config) => envSchema.parse(config),
@@ -27,6 +31,7 @@ import { UserModule } from './user/user.module';
     HealthModule,
     PrismaModule,
     UserModule,
+    RedisModule,
   ],
   controllers: [AppController],
   providers: [AppService],
