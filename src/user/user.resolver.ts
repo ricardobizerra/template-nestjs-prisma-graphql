@@ -8,7 +8,7 @@ import {
   Subscription,
 } from '@nestjs/graphql';
 import { UserService } from './user.service';
-import { GraphQLResolveInfo } from 'graphql';
+import { GraphQLError, GraphQLResolveInfo } from 'graphql';
 import { getQueriedFields } from 'src/utils/get-queried-fields';
 import { UserCreateInput } from 'src/graphql/prisma-client';
 import { RedisService } from 'src/redis/redis.service';
@@ -34,6 +34,12 @@ export class UserResolver {
 
   @Mutation(() => UserModel, { name: 'createUser' })
   async create(@Args('data') data: UserCreateInput) {
+    const emailAlreadyExists = await this.userService.findByEmail(data.email);
+
+    if (!!emailAlreadyExists) {
+      throw new GraphQLError('E-mail já cadastrado');
+    }
+
     return this.userService.create(data);
   }
 

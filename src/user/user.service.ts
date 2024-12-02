@@ -28,6 +28,14 @@ export class UserService {
     });
   }
 
+  async findByEmail(email: string) {
+    return this.prismaService.user.findUnique({
+      where: {
+        email,
+      },
+    });
+  }
+
   async create(data: UserCreateInput) {
     const createdUser = await this.prismaService.user.create({
       data,
