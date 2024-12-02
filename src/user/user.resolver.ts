@@ -34,7 +34,6 @@ export class UserResolver {
 
   @Mutation(() => UserModel, { name: 'createUser' })
   async create(@Args('data') data: UserCreateInput) {
-    this.redisService.publish('userAdded', { userAdded: data });
     return this.userService.create(data);
   }
 
