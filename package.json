@@ -7,8 +7,8 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
-    "format": "prettier --write \"src/**/*.ts\" \"!src/graphql/**/*.ts\" \"test/**/*.ts\"",
-    "format:prisma": "prettier --write \"src/graphql/prisma-client/**/*.ts\" --log-level=error",
+    "format": "prettier --write \"src/**/*.ts\" \"!src/lib/graphql/**/*.ts\" \"test/**/*.ts\"",
+    "format:prisma": "prettier --write \"src/lib/graphql/prisma-client/**/*.ts\" --log-level=error",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",

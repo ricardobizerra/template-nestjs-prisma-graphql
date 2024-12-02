@@ -10,8 +10,8 @@ import {
 import { UserService } from '@/user/user.service';
 import { GraphQLError, GraphQLResolveInfo } from 'graphql';
 import { getQueriedFields } from '@/utils/get-queried-fields';
-import { UserCreateInput } from '@/graphql/prisma-client';
-import { RedisService } from '@/redis/redis.service';
+import { UserCreateInput } from '@/lib/graphql/prisma-client';
+import { RedisService } from '@/lib/redis/redis.service';
 import { UserModel } from '@/user/models/user.model';
 
 @Resolver(() => UserModel)

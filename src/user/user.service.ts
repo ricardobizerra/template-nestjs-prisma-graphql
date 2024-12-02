@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { User } from '@prisma/client';
-import { UserCreateInput } from '@/graphql/prisma-client';
-import { PrismaService } from '@/prisma/prisma.service';
-import { RedisService } from '@/redis/redis.service';
+import { UserCreateInput } from '@/lib/graphql/prisma-client';
+import { PrismaService } from '@/lib/prisma/prisma.service';
+import { RedisService } from '@/lib/redis/redis.service';
 import { selectObject } from '@/utils/select-object';
 
 @Injectable()
