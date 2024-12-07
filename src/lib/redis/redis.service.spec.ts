@@ -1,13 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { TestingModule } from '@nestjs/testing';
 import { RedisService } from './redis.service';
+import { createTestModel } from '@/utils/create-test-model';
 
 describe('RedisService', () => {
   let service: RedisService;
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    const module: TestingModule = await createTestModel({
       providers: [RedisService],
-    }).compile();
+    });
 
     service = module.get<RedisService>(RedisService);
   });
