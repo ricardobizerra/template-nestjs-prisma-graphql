@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const ambients = ['development', 'staging', 'production'] as const;
+const ambients = ['development', 'staging', 'production', 'test'] as const;
 
 export const envSchema = z.object({
   APP_NAME: z.coerce.string().optional().default('rblf'),
