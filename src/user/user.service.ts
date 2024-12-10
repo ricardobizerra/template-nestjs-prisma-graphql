@@ -4,6 +4,7 @@ import { UserCreateInput } from '@/lib/graphql/prisma-client';
 import { PrismaService } from '@/lib/prisma/prisma.service';
 import { RedisService } from '@/lib/redis/redis.service';
 import { selectObject } from '@/utils/select-object';
+import { genSalt, hash } from 'bcryptjs';
 
 @Injectable()
 export class UserService {
@@ -37,8 +38,11 @@ export class UserService {
   }
 
   async create(data: UserCreateInput) {
+    const salt = await genSalt(10);
+    const hashedPassword = await hash(data.password, salt);
+
     const createdUser = await this.prismaService.user.create({
-      data,
+      data: { ...data, password: hashedPassword },
     });
 
     if (!!createdUser) {
