@@ -38,6 +38,7 @@ type Query {
 
 type Mutation {
   createUser(data: UserCreateInput!): UserModel!
+  authSignIn(data: AuthSignInInput!): UserModel!
 }
 
 input UserCreateInput {
@@ -45,6 +46,11 @@ input UserCreateInput {
   email: String!
   password: String!
   name: String!
+}
+
+input AuthSignInInput {
+  username: String!
+  password: String!
 }
 
 type Subscription {

@@ -11,6 +11,7 @@ import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin
 import { HealthModule } from '@/health/health.module';
 import { UserModule } from '@/user/user.module';
 import { RedisModule } from '@/lib/redis/redis.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { RedisModule } from '@/lib/redis/redis.module';
     PrismaModule,
     UserModule,
     RedisModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
