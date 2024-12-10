@@ -30,6 +30,10 @@ type UserModel {
   name: String!
 }
 
+type SignIn {
+  accessToken: String!
+}
+
 type Query {
   health: String!
   users: [UserModel!]!
@@ -38,7 +42,7 @@ type Query {
 
 type Mutation {
   createUser(data: UserCreateInput!): UserModel!
-  authSignIn(data: AuthSignInInput!): UserModel!
+  authSignIn(data: AuthSignInInput!): SignIn!
 }
 
 input UserCreateInput {
