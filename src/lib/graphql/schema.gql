@@ -7,6 +7,7 @@ type UserCountAggregate {
   email: Int!
   password: Int!
   name: Int!
+  role: Int!
   _all: Int!
 }
 
@@ -15,6 +16,11 @@ type UserMaxAggregate {
   email: String
   password: String
   name: String
+  role: Role
+}
+
+enum Role {
+  ADMIN
 }
 
 type UserMinAggregate {
@@ -22,12 +28,14 @@ type UserMinAggregate {
   email: String
   password: String
   name: String
+  role: Role
 }
 
 type UserModel {
   id: ID!
   email: String!
   name: String!
+  role: Role!
 }
 
 type SignIn {
@@ -50,6 +58,7 @@ input UserCreateInput {
   email: String!
   password: String!
   name: String!
+  role: Role!
 }
 
 input AuthSignInInput {

@@ -10,7 +10,7 @@ import {
 import { UserService } from '@/user/user.service';
 import { GraphQLError, GraphQLResolveInfo } from 'graphql';
 import { getQueriedFields } from '@/utils/get-queried-fields';
-import { UserCreateInput } from '@/lib/graphql/prisma-client';
+import { Role, UserCreateInput } from '@/lib/graphql/prisma-client';
 import { RedisService } from '@/lib/redis/redis.service';
 import { UserModel } from '@/user/models/user.model';
 import { Auth } from '@/auth/auth.decorator';
@@ -28,7 +28,7 @@ export class UserResolver {
     return this.userService.findMany(queriedFields);
   }
 
-  @Auth()
+  @Auth(Role.ADMIN)
   @Query(() => UserModel, { name: 'user' })
   async findOne(@Args('id', { type: () => ID! }) id: string) {
     return this.userService.findOne(id);

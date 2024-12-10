@@ -13,6 +13,7 @@ export enum UserScalarFieldEnum {
   email = 'email',
   password = 'password',
   name = 'name',
+  role = 'role',
 }
 
 export enum TransactionIsolationLevel {
@@ -27,12 +28,17 @@ export enum SortOrder {
   desc = 'desc',
 }
 
+export enum Role {
+  ADMIN = 'ADMIN',
+}
+
 export enum QueryMode {
   'default' = 'default',
   insensitive = 'insensitive',
 }
 
 registerEnumType(QueryMode, { name: 'QueryMode', description: undefined });
+registerEnumType(Role, { name: 'Role', description: undefined });
 registerEnumType(SortOrder, { name: 'SortOrder', description: undefined });
 registerEnumType(TransactionIsolationLevel, {
   name: 'TransactionIsolationLevel',
@@ -47,6 +53,72 @@ registerEnumType(UserScalarFieldEnum, {
 export class AffectedRows {
   @Field(() => Int, { nullable: false })
   count!: number;
+}
+
+@InputType()
+export class EnumRoleFieldUpdateOperationsInput {
+  @Field(() => Role, { nullable: true })
+  set?: keyof typeof Role;
+}
+
+@InputType()
+export class EnumRoleFilter {
+  @Field(() => Role, { nullable: true })
+  equals?: keyof typeof Role;
+  @Field(() => [Role], { nullable: true })
+  in?: Array<keyof typeof Role>;
+  @Field(() => [Role], { nullable: true })
+  notIn?: Array<keyof typeof Role>;
+  @Field(() => NestedEnumRoleFilter, { nullable: true })
+  not?: InstanceType<typeof NestedEnumRoleFilter>;
+}
+
+@InputType()
+export class EnumRoleWithAggregatesFilter {
+  @Field(() => Role, { nullable: true })
+  equals?: keyof typeof Role;
+  @Field(() => [Role], { nullable: true })
+  in?: Array<keyof typeof Role>;
+  @Field(() => [Role], { nullable: true })
+  notIn?: Array<keyof typeof Role>;
+  @Field(() => NestedEnumRoleWithAggregatesFilter, { nullable: true })
+  not?: InstanceType<typeof NestedEnumRoleWithAggregatesFilter>;
+  @Field(() => NestedIntFilter, { nullable: true })
+  _count?: InstanceType<typeof NestedIntFilter>;
+  @Field(() => NestedEnumRoleFilter, { nullable: true })
+  _min?: InstanceType<typeof NestedEnumRoleFilter>;
+  @Field(() => NestedEnumRoleFilter, { nullable: true })
+  _max?: InstanceType<typeof NestedEnumRoleFilter>;
+}
+
+@InputType()
+export class NestedEnumRoleFilter {
+  @Field(() => Role, { nullable: true })
+  equals?: keyof typeof Role;
+  @Field(() => [Role], { nullable: true })
+  in?: Array<keyof typeof Role>;
+  @Field(() => [Role], { nullable: true })
+  notIn?: Array<keyof typeof Role>;
+  @Field(() => NestedEnumRoleFilter, { nullable: true })
+  not?: InstanceType<typeof NestedEnumRoleFilter>;
+}
+
+@InputType()
+export class NestedEnumRoleWithAggregatesFilter {
+  @Field(() => Role, { nullable: true })
+  equals?: keyof typeof Role;
+  @Field(() => [Role], { nullable: true })
+  in?: Array<keyof typeof Role>;
+  @Field(() => [Role], { nullable: true })
+  notIn?: Array<keyof typeof Role>;
+  @Field(() => NestedEnumRoleWithAggregatesFilter, { nullable: true })
+  not?: InstanceType<typeof NestedEnumRoleWithAggregatesFilter>;
+  @Field(() => NestedIntFilter, { nullable: true })
+  _count?: InstanceType<typeof NestedIntFilter>;
+  @Field(() => NestedEnumRoleFilter, { nullable: true })
+  _min?: InstanceType<typeof NestedEnumRoleFilter>;
+  @Field(() => NestedEnumRoleFilter, { nullable: true })
+  _max?: InstanceType<typeof NestedEnumRoleFilter>;
 }
 
 @InputType()
@@ -365,6 +437,8 @@ export class UserCountAggregateInput {
   @Field(() => Boolean, { nullable: true })
   name?: true;
   @Field(() => Boolean, { nullable: true })
+  role?: true;
+  @Field(() => Boolean, { nullable: true })
   _all?: true;
 }
 
@@ -379,6 +453,8 @@ export class UserCountAggregate {
   @Field(() => Int, { nullable: false })
   name!: number;
   @Field(() => Int, { nullable: false })
+  role!: number;
+  @Field(() => Int, { nullable: false })
   _all!: number;
 }
 
@@ -392,6 +468,8 @@ export class UserCountOrderByAggregateInput {
   password?: keyof typeof SortOrder;
   @Field(() => SortOrder, { nullable: true })
   name?: keyof typeof SortOrder;
+  @Field(() => SortOrder, { nullable: true })
+  role?: keyof typeof SortOrder;
 }
 
 @InputType()
@@ -404,6 +482,8 @@ export class UserCreateManyInput {
   password!: string;
   @Field(() => String, { nullable: false })
   name!: string;
+  @Field(() => Role, { nullable: false })
+  role!: keyof typeof Role;
 }
 
 @InputType()
@@ -416,6 +496,8 @@ export class UserCreateInput {
   password!: string;
   @Field(() => String, { nullable: false })
   name!: string;
+  @Field(() => Role, { nullable: false })
+  role!: keyof typeof Role;
 }
 
 @ArgsType()
@@ -451,6 +533,8 @@ export class UserGroupBy {
   password!: string;
   @Field(() => String, { nullable: false })
   name!: string;
+  @Field(() => Role, { nullable: false })
+  role!: keyof typeof Role;
   @Field(() => UserCountAggregate, { nullable: true })
   _count?: InstanceType<typeof UserCountAggregate>;
   @Field(() => UserMinAggregate, { nullable: true })
@@ -469,6 +553,8 @@ export class UserMaxAggregateInput {
   password?: true;
   @Field(() => Boolean, { nullable: true })
   name?: true;
+  @Field(() => Boolean, { nullable: true })
+  role?: true;
 }
 
 @ObjectType()
@@ -481,6 +567,8 @@ export class UserMaxAggregate {
   password?: string;
   @Field(() => String, { nullable: true })
   name?: string;
+  @Field(() => Role, { nullable: true })
+  role?: keyof typeof Role;
 }
 
 @InputType()
@@ -493,6 +581,8 @@ export class UserMaxOrderByAggregateInput {
   password?: keyof typeof SortOrder;
   @Field(() => SortOrder, { nullable: true })
   name?: keyof typeof SortOrder;
+  @Field(() => SortOrder, { nullable: true })
+  role?: keyof typeof SortOrder;
 }
 
 @InputType()
@@ -505,6 +595,8 @@ export class UserMinAggregateInput {
   password?: true;
   @Field(() => Boolean, { nullable: true })
   name?: true;
+  @Field(() => Boolean, { nullable: true })
+  role?: true;
 }
 
 @ObjectType()
@@ -517,6 +609,8 @@ export class UserMinAggregate {
   password?: string;
   @Field(() => String, { nullable: true })
   name?: string;
+  @Field(() => Role, { nullable: true })
+  role?: keyof typeof Role;
 }
 
 @InputType()
@@ -529,6 +623,8 @@ export class UserMinOrderByAggregateInput {
   password?: keyof typeof SortOrder;
   @Field(() => SortOrder, { nullable: true })
   name?: keyof typeof SortOrder;
+  @Field(() => SortOrder, { nullable: true })
+  role?: keyof typeof SortOrder;
 }
 
 @InputType()
@@ -541,6 +637,8 @@ export class UserOrderByWithAggregationInput {
   password?: keyof typeof SortOrder;
   @Field(() => SortOrder, { nullable: true })
   name?: keyof typeof SortOrder;
+  @Field(() => SortOrder, { nullable: true })
+  role?: keyof typeof SortOrder;
   @Field(() => UserCountOrderByAggregateInput, { nullable: true })
   _count?: InstanceType<typeof UserCountOrderByAggregateInput>;
   @Field(() => UserMaxOrderByAggregateInput, { nullable: true })
@@ -559,6 +657,8 @@ export class UserOrderByWithRelationInput {
   password?: keyof typeof SortOrder;
   @Field(() => SortOrder, { nullable: true })
   name?: keyof typeof SortOrder;
+  @Field(() => SortOrder, { nullable: true })
+  role?: keyof typeof SortOrder;
 }
 
 @InputType()
@@ -577,6 +677,8 @@ export class UserScalarWhereWithAggregatesInput {
   password?: InstanceType<typeof StringWithAggregatesFilter>;
   @Field(() => StringWithAggregatesFilter, { nullable: true })
   name?: InstanceType<typeof StringWithAggregatesFilter>;
+  @Field(() => EnumRoleWithAggregatesFilter, { nullable: true })
+  role?: InstanceType<typeof EnumRoleWithAggregatesFilter>;
 }
 
 @InputType()
@@ -589,6 +691,8 @@ export class UserUncheckedCreateInput {
   password!: string;
   @Field(() => String, { nullable: false })
   name!: string;
+  @Field(() => Role, { nullable: false })
+  role!: keyof typeof Role;
 }
 
 @InputType()
@@ -601,6 +705,8 @@ export class UserUncheckedUpdateManyInput {
   password?: InstanceType<typeof StringFieldUpdateOperationsInput>;
   @Field(() => StringFieldUpdateOperationsInput, { nullable: true })
   name?: InstanceType<typeof StringFieldUpdateOperationsInput>;
+  @Field(() => EnumRoleFieldUpdateOperationsInput, { nullable: true })
+  role?: InstanceType<typeof EnumRoleFieldUpdateOperationsInput>;
 }
 
 @InputType()
@@ -613,6 +719,8 @@ export class UserUncheckedUpdateInput {
   password?: InstanceType<typeof StringFieldUpdateOperationsInput>;
   @Field(() => StringFieldUpdateOperationsInput, { nullable: true })
   name?: InstanceType<typeof StringFieldUpdateOperationsInput>;
+  @Field(() => EnumRoleFieldUpdateOperationsInput, { nullable: true })
+  role?: InstanceType<typeof EnumRoleFieldUpdateOperationsInput>;
 }
 
 @InputType()
@@ -625,6 +733,8 @@ export class UserUpdateManyMutationInput {
   password?: InstanceType<typeof StringFieldUpdateOperationsInput>;
   @Field(() => StringFieldUpdateOperationsInput, { nullable: true })
   name?: InstanceType<typeof StringFieldUpdateOperationsInput>;
+  @Field(() => EnumRoleFieldUpdateOperationsInput, { nullable: true })
+  role?: InstanceType<typeof EnumRoleFieldUpdateOperationsInput>;
 }
 
 @InputType()
@@ -637,6 +747,8 @@ export class UserUpdateInput {
   password?: InstanceType<typeof StringFieldUpdateOperationsInput>;
   @Field(() => StringFieldUpdateOperationsInput, { nullable: true })
   name?: InstanceType<typeof StringFieldUpdateOperationsInput>;
+  @Field(() => EnumRoleFieldUpdateOperationsInput, { nullable: true })
+  role?: InstanceType<typeof EnumRoleFieldUpdateOperationsInput>;
 }
 
 @InputType()
@@ -655,6 +767,8 @@ export class UserWhereUniqueInput {
   password?: InstanceType<typeof StringFilter>;
   @Field(() => StringFilter, { nullable: true })
   name?: InstanceType<typeof StringFilter>;
+  @Field(() => EnumRoleFilter, { nullable: true })
+  role?: InstanceType<typeof EnumRoleFilter>;
 }
 
 @InputType()
@@ -673,6 +787,8 @@ export class UserWhereInput {
   password?: InstanceType<typeof StringFilter>;
   @Field(() => StringFilter, { nullable: true })
   name?: InstanceType<typeof StringFilter>;
+  @Field(() => EnumRoleFilter, { nullable: true })
+  role?: InstanceType<typeof EnumRoleFilter>;
 }
 
 @ObjectType()
@@ -685,4 +801,6 @@ export class User {
   password!: string;
   @Field(() => String, { nullable: false })
   name!: string;
+  @Field(() => Role, { nullable: false })
+  role!: keyof typeof Role;
 }
