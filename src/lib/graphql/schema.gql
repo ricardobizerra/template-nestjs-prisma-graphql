@@ -45,7 +45,7 @@ type SignIn {
 type Query {
   health: String!
   users: [UserModel!]!
-  user(id: ID!): UserModel!
+  user: UserModel!
 }
 
 type Mutation {

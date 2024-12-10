@@ -14,6 +14,7 @@ import { Role, UserCreateInput } from '@/lib/graphql/prisma-client';
 import { RedisService } from '@/lib/redis/redis.service';
 import { UserModel } from '@/user/models/user.model';
 import { Auth } from '@/auth/auth.decorator';
+import { CurrentUser } from './user.decorator';
 
 @Resolver(() => UserModel)
 export class UserResolver {
@@ -30,8 +31,8 @@ export class UserResolver {
 
   @Auth(Role.ADMIN)
   @Query(() => UserModel, { name: 'user' })
-  async findOne(@Args('id', { type: () => ID! }) id: string) {
-    return this.userService.findOne(id);
+  async findOne(@CurrentUser() user: UserModel) {
+    return this.userService.findOne(user.id);
   }
 
   @Mutation(() => UserModel, { name: 'createUser' })
