@@ -8,12 +8,16 @@ import { ConfigService } from '@nestjs/config';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
+import { JwtPayload } from '@/auth/interfaces/jwt.interface';
+import { UserService } from '@/user/user.service';
+import { userWithoutPassword } from '@/utils/user-without-password';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly userService: UserService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -25,7 +29,7 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException();
     }
 
-    const payload = await this.jwtService.verifyAsync(token, {
+    const payload: JwtPayload = await this.jwtService.verifyAsync(token, {
       secret: this.configService.get('JWT_SECRET'),
     });
 
@@ -33,7 +37,13 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException();
     }
 
-    request['user'] = payload;
+    const user = await this.userService.findOne(payload.sub);
+
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+
+    request['user'] = userWithoutPassword(user);
 
     return true;
   }
