@@ -8,6 +8,8 @@ export const envSchema = z.object({
   PORT: z.coerce.number().optional().default(3333),
   NODE_ENV: z.enum(ambients).default('development'),
 
+  FRONTEND_URL: z.coerce.string(),
+
   POSTGRES_USER: z.coerce.string(),
   POSTGRES_PASSWORD: z.coerce.string(),
   POSTGRES_DB: z.coerce.string(),
