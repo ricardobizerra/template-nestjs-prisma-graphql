@@ -24,4 +24,5 @@ model User {
 
 enum Role {
   ADMIN
+  USER
 }
