@@ -25,6 +25,7 @@ export const envSchema = z.object({
   REDIS_URL: z.coerce.string(),
 
   JWT_SECRET: z.coerce.string(),
+  JWT_EXPIRES_IN_SECONDS: z.coerce.number(),
 });
 
 export type Env = z.infer<typeof envSchema>;
