@@ -51,7 +51,7 @@ type Query {
 }
 
 type Mutation {
-  createUser(data: UserCreateInput!): UserModel!
+  createUser(data: UserCreateInput!): SignIn!
   authSignIn(data: AuthSignInInput!): SignIn!
 }
 

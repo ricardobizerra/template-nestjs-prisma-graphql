@@ -15,12 +15,15 @@ import { RedisService } from '@/lib/redis/redis.service';
 import { UserModel } from '@/user/models/user.model';
 import { Auth } from '@/auth/auth.decorator';
 import { CurrentUser } from './user.decorator';
+import { AuthService } from '@/auth/auth.service';
+import { SignIn } from '@/auth/models/sign-in.model';
 
 @Resolver(() => UserModel)
 export class UserResolver {
   constructor(
     private readonly userService: UserService,
     private readonly redisService: RedisService,
+    private readonly authService: AuthService,
   ) {}
 
   @Query(() => [UserModel], { name: 'users' })
@@ -35,7 +38,7 @@ export class UserResolver {
     return this.userService.findOne(user.id);
   }
 
-  @Mutation(() => UserModel, { name: 'createUser' })
+  @Mutation(() => SignIn, { name: 'createUser' })
   async create(@Args('data') data: UserCreateInput) {
     const emailAlreadyExists = await this.userService.findByEmail(data.email);
 
@@ -43,7 +46,15 @@ export class UserResolver {
       throw new GraphQLError('E-mail já cadastrado');
     }
 
-    return this.userService.create(data);
+    const createdUser = await this.userService.create(data);
+
+    const returnObject = await this.authService.signIn(
+      createdUser.email,
+      createdUser.password,
+      false,
+    );
+
+    return returnObject;
   }
 
   @Subscription(() => UserModel, {
