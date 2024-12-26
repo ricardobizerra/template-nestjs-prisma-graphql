@@ -12,17 +12,23 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async signIn(email: string, password: string): Promise<SignIn> {
+  async signIn(
+    email: string,
+    password: string,
+    shallCheckPassword: boolean = true,
+  ): Promise<SignIn> {
     const user = await this.usersService.findByEmail(email);
 
     if (!user) {
-      throw new UnauthorizedException();
+      throw new UnauthorizedException('Usuário não encontrado');
     }
 
-    const passwordCheck = await compare(password, user?.password);
+    if (shallCheckPassword) {
+      const passwordCheck = await compare(password, user?.password);
 
-    if (!passwordCheck) {
-      throw new UnauthorizedException();
+      if (!passwordCheck) {
+        throw new UnauthorizedException('Senha incorreta');
+      }
     }
 
     const payload = {
