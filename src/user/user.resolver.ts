@@ -50,8 +50,7 @@ export class UserResolver {
 
     const returnObject = await this.authService.signIn(
       createdUser.email,
-      createdUser.password,
-      false,
+      data.password,
     );
 
     return returnObject;

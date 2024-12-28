@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { compare } from 'bcryptjs';
 import { SignIn } from './models/sign-in.model';
 import { userWithoutPassword } from '@/utils/user-without-password';
+import { UserModel } from '@/user/models/user.model';
 
 @Injectable()
 export class AuthService {
@@ -12,37 +13,48 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async signIn(
+  async validateEmailAndPassword(
     email: string,
     password: string,
-    shallCheckPassword: boolean = true,
-  ): Promise<SignIn> {
+  ): Promise<UserModel> {
     const user = await this.usersService.findByEmail(email);
 
     if (!user) {
-      throw new UnauthorizedException('Usuário não encontrado');
+      throw new UnauthorizedException();
     }
 
-    if (shallCheckPassword) {
-      const passwordCheck = await compare(password, user?.password);
+    const passwordCheck = await compare(password, user?.password);
 
-      if (!passwordCheck) {
-        throw new UnauthorizedException('Senha incorreta');
-      }
+    if (!passwordCheck) {
+      throw new UnauthorizedException();
     }
+
+    return userWithoutPassword(user);
+  }
+
+  async validateUserId(id: string): Promise<UserModel> {
+    const user = await this.usersService.findOne(id);
+
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+
+    return userWithoutPassword(user);
+  }
+
+  async signIn(email: string, password: string): Promise<SignIn> {
+    const user = await this.validateEmailAndPassword(email, password);
 
     const payload = {
       sub: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
+      ...user,
     };
 
     const accessToken = await this.jwtService.signAsync(payload);
 
     return {
       accessToken,
-      user: userWithoutPassword(user),
+      user,
     };
   }
 }
