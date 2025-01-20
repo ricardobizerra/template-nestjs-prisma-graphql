@@ -1,8 +1,9 @@
-import { GraphQLResolveInfo } from 'graphql';
+import { FieldNode, GraphQLResolveInfo, SelectionSetNode } from 'graphql';
 
 export function getQueriedFields(
   info: GraphQLResolveInfo,
   fieldName: string,
+  paginatedQuery = true,
 ): string[] {
   const fieldNode = info.fieldNodes.find(
     (node) => node.name.value === fieldName,
@@ -12,8 +13,34 @@ export function getQueriedFields(
     return [];
   }
 
+  if (!!paginatedQuery) {
+    const edgesField = findFieldByName(fieldNode.selectionSet, 'edges');
+
+    if (!edgesField || !edgesField.selectionSet) {
+      return [];
+    }
+
+    const nodeField = findFieldByName(edgesField.selectionSet, 'node');
+
+    if (!nodeField || !nodeField.selectionSet) {
+      return [];
+    }
+
+    return extractFields(nodeField.selectionSet);
+  }
+
   return extractFields(fieldNode.selectionSet);
 }
+
+const findFieldByName = (
+  selectionSet: SelectionSetNode,
+  fieldName: string,
+): FieldNode | undefined => {
+  return selectionSet.selections.find(
+    (selection): selection is FieldNode =>
+      selection.kind === 'Field' && selection.name.value === fieldName,
+  );
+};
 
 const extractFields = (selectionSet: any): string[] => {
   const fields: string[] = [];
