@@ -24,36 +24,23 @@ export class UserService {
     paginationArgs: PaginationArgs;
     searchArgs: SearchArgs;
   }) {
-    const select = selectObject<User>(queriedFields);
+    const unbufferedCursor = paginationArgs.after
+      ? Buffer.from(paginationArgs.after).toString()
+      : undefined;
 
-    const users = await this.prismaService.user.findMany({
-      select,
-      take: paginationArgs.first,
-      cursor: paginationArgs.after
-        ? {
-            id: Buffer.from(paginationArgs.after, 'base64').toString(),
-          }
-        : undefined,
-      skip: paginationArgs.after ? 1 : 0,
-      ...(!!searchArgs.search && {
-        where: {
-          OR: [
-            {
-              name: {
-                contains: searchArgs.search,
-                mode: 'insensitive',
-              },
-            },
-            {
-              email: {
-                contains: searchArgs.search,
-                mode: 'insensitive',
-              },
-            },
-          ],
-        },
-      }),
-    });
+    const users = await this.prismaService.$queryRaw<User[]>(
+      Prisma.sql`
+        SELECT ${Prisma.join(
+          queriedFields.map((field) => Prisma.raw(field)),
+          ', ',
+        )}
+        FROM "User"
+        ${paginationArgs.after ? Prisma.sql`WHERE id > ${unbufferedCursor}` : Prisma.sql`WHERE 1=1`}
+        ${!!searchArgs.search ? Prisma.sql`AND (unaccent(name) ILIKE ${`%${searchArgs.search}%`} OR unaccent(email) ILIKE ${`%${searchArgs.search}%`})` : Prisma.empty}
+        ORDER BY id ASC
+        LIMIT ${paginationArgs.first} OFFSET ${paginationArgs.after ? 1 : 0}
+      `,
+    );
 
     if (users.length === 0) {
       return {
@@ -89,38 +76,20 @@ export class UserService {
       };
     }
 
-    const extraItem = await this.prismaService.user.findFirst({
-      select: { id: true },
-      take: 1,
-      skip: paginationArgs.after
-        ? paginationArgs.first + 1
-        : paginationArgs.first,
-      cursor: paginationArgs.after
-        ? {
-            id: Buffer.from(paginationArgs.after, 'base64').toString(),
-          }
-        : undefined,
-      ...(!!searchArgs.search && {
-        where: {
-          OR: [
-            {
-              name: {
-                contains: searchArgs.search,
-                mode: 'insensitive',
-              },
-            },
-            {
-              email: {
-                contains: searchArgs.search,
-                mode: 'insensitive',
-              },
-            },
-          ],
-        },
-      }),
-    });
+    const extraItem = await this.prismaService.$queryRaw<
+      Array<Pick<User, 'id'>>
+    >(
+      Prisma.sql`
+        SELECT id
+        FROM "User"
+        ${paginationArgs.after ? Prisma.sql`WHERE id > ${unbufferedCursor}` : Prisma.sql`WHERE 1=1`}
+        ${!!searchArgs.search ? Prisma.sql`AND (unaccent(name) ILIKE ${`%${searchArgs.search}%`} OR unaccent(email) ILIKE ${`%${searchArgs.search}%`})` : Prisma.empty}
+        ORDER BY id ASC
+        LIMIT 1 OFFSET ${paginationArgs.after ? paginationArgs.first + 1 : paginationArgs.first}
+      `,
+    );
 
-    const hasNextPage = !!extraItem && !!extraItem.id;
+    const hasNextPage = !!extraItem?.length;
     const hasPreviousPage = !!paginationArgs.after;
 
     const pageInfo = {
