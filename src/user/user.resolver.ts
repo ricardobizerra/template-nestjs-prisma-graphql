@@ -17,6 +17,9 @@ import { Auth } from '@/auth/auth.decorator';
 import { CurrentUser } from './user.decorator';
 import { AuthService } from '@/auth/auth.service';
 import { SignIn } from '@/auth/models/sign-in.model';
+import { UserConnection } from './models/user.connection';
+import { PaginationArgs } from '@/utils/args/pagination.args';
+import { SearchArgs } from '@/utils/args/search.args';
 
 @Resolver(() => UserModel)
 export class UserResolver {
@@ -26,10 +29,18 @@ export class UserResolver {
     private readonly authService: AuthService,
   ) {}
 
-  @Query(() => [UserModel], { name: 'users' })
-  async findMany(@Info() info: GraphQLResolveInfo) {
+  @Query(() => UserConnection, { name: 'users' })
+  async findMany(
+    @Args() paginationArgs: PaginationArgs,
+    @Args() searchArgs: SearchArgs,
+    @Info() info: GraphQLResolveInfo,
+  ) {
     const queriedFields = getQueriedFields(info, 'users');
-    return this.userService.findMany(queriedFields);
+    return this.userService.findMany({
+      queriedFields,
+      paginationArgs,
+      searchArgs,
+    });
   }
 
   @Auth(Role.ADMIN)

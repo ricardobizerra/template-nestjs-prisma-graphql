@@ -44,9 +44,26 @@ type SignIn {
   user: UserModel
 }
 
+type PageInfo {
+  startCursor: String
+  endCursor: String
+  hasPreviousPage: Boolean!
+  hasNextPage: Boolean!
+}
+
+type UserConnection {
+  edges: [UserModelEdge!]
+  pageInfo: PageInfo
+}
+
+type UserModelEdge {
+  cursor: String!
+  node: UserModel!
+}
+
 type Query {
   health: String!
-  users: [UserModel!]!
+  users(first: Int, after: String, last: Int, before: String, search: String): UserConnection!
   user: UserModel!
 }
 
