@@ -25,7 +25,7 @@ export class UserService {
     searchArgs: SearchArgs;
   }) {
     const unbufferedCursor = paginationArgs.after
-      ? Buffer.from(paginationArgs.after).toString()
+      ? Buffer.from(paginationArgs.after, 'base64').toString('utf-8')
       : undefined;
 
     const users = await this.prismaService.$queryRaw<User[]>(
@@ -35,10 +35,11 @@ export class UserService {
           ', ',
         )}
         FROM "User"
-        ${paginationArgs.after ? Prisma.sql`WHERE id > ${unbufferedCursor}` : Prisma.sql`WHERE 1=1`}
-        ${!!searchArgs.search ? Prisma.sql`AND (unaccent(name) ILIKE ${`%${searchArgs.search}%`} OR unaccent(email) ILIKE ${`%${searchArgs.search}%`})` : Prisma.empty}
+        ${paginationArgs.after ? Prisma.sql`WHERE id >= ${unbufferedCursor}` : Prisma.empty}
+        ${!!searchArgs.search ? Prisma.sql`${paginationArgs.after ? Prisma.sql`AND` : Prisma.sql`WHERE`} (unaccent(name) ILIKE ${`%${searchArgs.search}%`} OR unaccent(email) ILIKE ${`%${searchArgs.search}%`})` : Prisma.empty}
         ORDER BY id ASC
-        LIMIT ${paginationArgs.first} OFFSET ${paginationArgs.after ? 1 : 0}
+        ${paginationArgs.first ? Prisma.sql`LIMIT ${paginationArgs.first}` : Prisma.empty}
+        ${paginationArgs.after ? Prisma.sql`OFFSET ${paginationArgs.after ? 1 : 0}` : Prisma.empty}
       `,
     );
 
@@ -82,10 +83,11 @@ export class UserService {
       Prisma.sql`
         SELECT id
         FROM "User"
-        ${paginationArgs.after ? Prisma.sql`WHERE id > ${unbufferedCursor}` : Prisma.sql`WHERE 1=1`}
-        ${!!searchArgs.search ? Prisma.sql`AND (unaccent(name) ILIKE ${`%${searchArgs.search}%`} OR unaccent(email) ILIKE ${`%${searchArgs.search}%`})` : Prisma.empty}
+        ${paginationArgs.after ? Prisma.sql`WHERE id > ${unbufferedCursor}` : Prisma.empty}
+        ${!!searchArgs.search ? Prisma.sql`${paginationArgs.after ? Prisma.sql`AND` : Prisma.sql`WHERE`} (unaccent(name) ILIKE ${`%${searchArgs.search}%`} OR unaccent(email) ILIKE ${`%${searchArgs.search}%`})` : Prisma.empty}
         ORDER BY id ASC
-        LIMIT 1 OFFSET ${paginationArgs.after ? paginationArgs.first + 1 : paginationArgs.first}
+        LIMIT 1
+        ${paginationArgs.after ? Prisma.sql`OFFSET ${paginationArgs.after ? paginationArgs.first + 1 : paginationArgs.first}` : Prisma.empty}
       `,
     );
 
