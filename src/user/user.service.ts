@@ -26,7 +26,9 @@ export class UserService {
   }) {
     const unbufferedCursor = paginationArgs.after
       ? Buffer.from(paginationArgs.after, 'base64').toString('utf-8')
-      : undefined;
+      : paginationArgs.before
+        ? Buffer.from(paginationArgs.before, 'base64').toString('utf-8')
+        : undefined;
 
     const users = await this.prismaService.$queryRaw<User[]>(
       Prisma.sql`
@@ -35,13 +37,36 @@ export class UserService {
           ', ',
         )}
         FROM "User"
-        ${paginationArgs.after ? Prisma.sql`WHERE id >= ${unbufferedCursor}` : Prisma.empty}
-        ${!!searchArgs.search ? Prisma.sql`${paginationArgs.after ? Prisma.sql`AND` : Prisma.sql`WHERE`} (unaccent(name) ILIKE ${`%${searchArgs.search}%`} OR unaccent(email) ILIKE ${`%${searchArgs.search}%`})` : Prisma.empty}
-        ORDER BY id ASC
-        ${paginationArgs.first ? Prisma.sql`LIMIT ${paginationArgs.first}` : Prisma.empty}
-        ${paginationArgs.after ? Prisma.sql`OFFSET ${paginationArgs.after ? 1 : 0}` : Prisma.empty}
+        ${
+          paginationArgs.after
+            ? Prisma.sql`WHERE id > ${unbufferedCursor}`
+            : paginationArgs.before
+              ? Prisma.sql`WHERE id < ${unbufferedCursor}`
+              : Prisma.empty
+        }
+        ${
+          !!searchArgs.search
+            ? Prisma.sql`${
+                paginationArgs.after || paginationArgs.before
+                  ? Prisma.sql`AND`
+                  : Prisma.sql`WHERE`
+              } (unaccent(name) ILIKE ${`%${searchArgs.search}%`} OR unaccent(email) ILIKE ${`%${searchArgs.search}%`})`
+            : Prisma.empty
+        }
+        ORDER BY id ${paginationArgs.last ? Prisma.sql`DESC` : Prisma.sql`ASC`}
+        LIMIT ${
+          paginationArgs.last
+            ? paginationArgs.last
+            : paginationArgs.first
+              ? paginationArgs.first
+              : Prisma.empty
+        }
       `,
     );
+
+    if (paginationArgs.last) {
+      users.reverse();
+    }
 
     if (users.length === 0) {
       return {
@@ -65,7 +90,7 @@ export class UserService {
       'base64',
     );
 
-    if (!paginationArgs.first) {
+    if (!paginationArgs.first && !paginationArgs.last) {
       return {
         edges,
         pageInfo: {
@@ -83,16 +108,41 @@ export class UserService {
       Prisma.sql`
         SELECT id
         FROM "User"
-        ${paginationArgs.after ? Prisma.sql`WHERE id > ${unbufferedCursor}` : Prisma.empty}
-        ${!!searchArgs.search ? Prisma.sql`${paginationArgs.after ? Prisma.sql`AND` : Prisma.sql`WHERE`} (unaccent(name) ILIKE ${`%${searchArgs.search}%`} OR unaccent(email) ILIKE ${`%${searchArgs.search}%`})` : Prisma.empty}
-        ORDER BY id ASC
+        ${
+          paginationArgs.after
+            ? Prisma.sql`WHERE id > ${unbufferedCursor}`
+            : paginationArgs.before
+              ? Prisma.sql`WHERE id < ${unbufferedCursor}`
+              : Prisma.empty
+        }
+        ${
+          !!searchArgs.search
+            ? Prisma.sql`${
+                paginationArgs.after || paginationArgs.before
+                  ? Prisma.sql`AND`
+                  : Prisma.sql`WHERE`
+              } (unaccent(name) ILIKE ${`%${searchArgs.search}%`} OR unaccent(email) ILIKE ${`%${searchArgs.search}%`})`
+            : Prisma.empty
+        }
+        ORDER BY id ${paginationArgs.last ? Prisma.sql`DESC` : Prisma.sql`ASC`}
         LIMIT 1
-        ${paginationArgs.after ? Prisma.sql`OFFSET ${paginationArgs.after ? paginationArgs.first + 1 : paginationArgs.first}` : Prisma.empty}
+        ${
+          paginationArgs.last
+            ? Prisma.sql`OFFSET ${paginationArgs.last}`
+            : paginationArgs.first
+              ? Prisma.sql`OFFSET ${paginationArgs.first}`
+              : Prisma.empty
+        }
       `,
     );
 
-    const hasNextPage = !!extraItem?.length;
-    const hasPreviousPage = !!paginationArgs.after;
+    const hasNextPage = paginationArgs.last
+      ? !!paginationArgs.before
+      : !!extraItem?.length;
+
+    const hasPreviousPage = paginationArgs.last
+      ? !!extraItem?.length
+      : !!paginationArgs.after;
 
     const pageInfo = {
       hasNextPage,
