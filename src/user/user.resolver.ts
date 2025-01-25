@@ -12,7 +12,7 @@ import { GraphQLError, GraphQLResolveInfo } from 'graphql';
 import { getQueriedFields } from '@/utils/get-queried-fields';
 import { Role, UserCreateInput } from '@/lib/graphql/prisma-client';
 import { RedisService } from '@/lib/redis/redis.service';
-import { UserModel } from '@/user/models/user.model';
+import { OrdenationUserArgs, UserModel } from '@/user/models/user.model';
 import { Auth } from '@/auth/auth.decorator';
 import { CurrentUser } from './user.decorator';
 import { AuthService } from '@/auth/auth.service';
@@ -33,6 +33,7 @@ export class UserResolver {
   async findMany(
     @Args() paginationArgs: PaginationArgs,
     @Args() searchArgs: SearchArgs,
+    @Args() ordenationArgs: OrdenationUserArgs,
     @Info() info: GraphQLResolveInfo,
   ) {
     const queriedFields = getQueriedFields(info, 'users');
@@ -40,6 +41,7 @@ export class UserResolver {
       queriedFields,
       paginationArgs,
       searchArgs,
+      ordenationArgs,
     });
   }
 

@@ -7,6 +7,8 @@ import { selectObject } from '@/utils/select-object';
 import { genSalt, hash } from 'bcryptjs';
 import { PaginationArgs } from '@/utils/args/pagination.args';
 import { SearchArgs } from '@/utils/args/search.args';
+import { OrdenationUserArgs } from './models/user.model';
+import { OrderDirection } from '@/utils/args/ordenation.args';
 
 @Injectable()
 export class UserService {
@@ -19,16 +21,20 @@ export class UserService {
     queriedFields,
     paginationArgs,
     searchArgs,
+    ordenationArgs,
   }: {
     queriedFields: string[];
     paginationArgs: PaginationArgs;
     searchArgs: SearchArgs;
+    ordenationArgs: OrdenationUserArgs;
   }) {
     const unbufferedCursor = paginationArgs.after
       ? Buffer.from(paginationArgs.after, 'base64').toString('utf-8')
       : paginationArgs.before
         ? Buffer.from(paginationArgs.before, 'base64').toString('utf-8')
         : undefined;
+
+    const { orderBy, orderDirection = OrderDirection.Asc } = ordenationArgs;
 
     const users = await this.prismaService.$queryRaw<User[]>(
       Prisma.sql`
@@ -53,7 +59,19 @@ export class UserService {
               } (unaccent(name) ILIKE ${`%${searchArgs.search}%`} OR unaccent(email) ILIKE ${`%${searchArgs.search}%`})`
             : Prisma.empty
         }
-        ORDER BY id ${paginationArgs.last ? Prisma.sql`DESC` : Prisma.sql`ASC`}
+        ${
+          orderBy
+            ? Prisma.sql`ORDER BY ${Prisma.raw(orderBy)} ${
+                paginationArgs.last
+                  ? orderDirection === OrderDirection.Asc
+                    ? Prisma.sql`DESC`
+                    : Prisma.sql`ASC`
+                  : orderDirection === OrderDirection.Asc
+                    ? Prisma.sql`ASC`
+                    : Prisma.sql`DESC`
+              }`
+            : Prisma.empty
+        }
         LIMIT ${
           paginationArgs.last
             ? paginationArgs.last
@@ -124,7 +142,19 @@ export class UserService {
               } (unaccent(name) ILIKE ${`%${searchArgs.search}%`} OR unaccent(email) ILIKE ${`%${searchArgs.search}%`})`
             : Prisma.empty
         }
-        ORDER BY id ${paginationArgs.last ? Prisma.sql`DESC` : Prisma.sql`ASC`}
+        ${
+          orderBy
+            ? Prisma.sql`ORDER BY ${Prisma.raw(orderBy)} ${
+                paginationArgs.last
+                  ? orderDirection === OrderDirection.Asc
+                    ? Prisma.sql`DESC`
+                    : Prisma.sql`ASC`
+                  : orderDirection === OrderDirection.Asc
+                    ? Prisma.sql`ASC`
+                    : Prisma.sql`DESC`
+              }`
+            : Prisma.empty
+        }
         LIMIT 1
         ${
           paginationArgs.last

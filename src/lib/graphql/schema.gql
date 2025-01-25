@@ -63,8 +63,20 @@ type UserModelEdge {
 
 type Query {
   health: String!
-  users(first: Int, after: String, last: Int, before: String, search: String): UserConnection!
+  users(first: Int, after: String, last: Int, before: String, search: String, orderBy: OrdenationUserModel, orderDirection: OrderDirection): UserConnection!
   user: UserModel!
+}
+
+enum OrdenationUserModel {
+  id
+  email
+  name
+  role
+}
+
+enum OrderDirection {
+  Asc
+  Desc
 }
 
 type Mutation {
