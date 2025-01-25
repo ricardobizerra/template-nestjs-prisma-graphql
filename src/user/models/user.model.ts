@@ -1,5 +1,6 @@
 import { Role } from '@/lib/graphql/prisma-client';
-import { Field, ID, ObjectType } from '@nestjs/graphql';
+import { Ordenation } from '@/utils/args/ordenation.args';
+import { ArgsType, Field, ID, ObjectType } from '@nestjs/graphql';
 
 @ObjectType()
 export class UserModel {
@@ -15,3 +16,13 @@ export class UserModel {
   @Field(() => Role, { nullable: false })
   role!: Role;
 }
+
+enum OrderBy {
+  id = 'id',
+  email = 'email',
+  name = 'name',
+  role = 'role',
+}
+
+@ArgsType()
+export class OrdenationUserArgs extends Ordenation(UserModel, OrderBy) {}
