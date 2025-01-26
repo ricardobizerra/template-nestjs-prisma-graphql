@@ -46,7 +46,7 @@ const extractFields = (selectionSet: any): string[] => {
   const fields: string[] = [];
 
   for (const selection of selectionSet.selections) {
-    if (selection.kind === 'Field') {
+    if (selection.kind === 'Field' && !selection.name.value.startsWith('_')) {
       fields.push(selection.name.value);
     } else if (selection.kind === 'InlineFragment' && selection.selectionSet) {
       fields.push(...extractFields(selection.selectionSet));
