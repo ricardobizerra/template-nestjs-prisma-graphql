@@ -29,12 +29,30 @@ export class UserService {
     ordenationArgs: OrdenationUserArgs;
   }) {
     const unbufferedCursor = paginationArgs.after
-      ? Buffer.from(paginationArgs.after, 'base64').toString('utf-8')
+      ? Number(Buffer.from(paginationArgs.after, 'base64').toString('utf-8'))
       : paginationArgs.before
-        ? Buffer.from(paginationArgs.before, 'base64').toString('utf-8')
-        : undefined;
+        ? Number(Buffer.from(paginationArgs.before, 'base64').toString('utf-8'))
+        : 0;
 
     const { orderBy, orderDirection = OrderDirection.Asc } = ordenationArgs;
+
+    const usersLengthQuery = paginationArgs.last
+      ? await this.prismaService.$queryRaw(
+          Prisma.sql`
+        SELECT COUNT(*)
+        FROM "User"
+        ${
+          !!searchArgs.search
+            ? Prisma.sql`WHERE (unaccent(name) ILIKE ${`%${searchArgs.search}%`} OR unaccent(email) ILIKE ${`%${searchArgs.search}%`})`
+            : Prisma.empty
+        }
+      `,
+        )
+      : undefined;
+
+    const usersLength = !!usersLengthQuery
+      ? Number(usersLengthQuery?.[0].count)
+      : undefined;
 
     const users = await this.prismaService.$queryRaw<User[]>(
       Prisma.sql`
@@ -44,19 +62,8 @@ export class UserService {
         )}
         FROM "User"
         ${
-          paginationArgs.after
-            ? Prisma.sql`WHERE id > ${unbufferedCursor}`
-            : paginationArgs.before
-              ? Prisma.sql`WHERE id < ${unbufferedCursor}`
-              : Prisma.empty
-        }
-        ${
           !!searchArgs.search
-            ? Prisma.sql`${
-                paginationArgs.after || paginationArgs.before
-                  ? Prisma.sql`AND`
-                  : Prisma.sql`WHERE`
-              } (unaccent(name) ILIKE ${`%${searchArgs.search}%`} OR unaccent(email) ILIKE ${`%${searchArgs.search}%`})`
+            ? Prisma.sql`WHERE (unaccent(name) ILIKE ${`%${searchArgs.search}%`} OR unaccent(email) ILIKE ${`%${searchArgs.search}%`})`
             : Prisma.empty
         }
         ${
@@ -74,9 +81,22 @@ export class UserService {
         }
         LIMIT ${
           paginationArgs.last
-            ? paginationArgs.last
+            ? unbufferedCursor
+              ? paginationArgs.last
+              : usersLength % paginationArgs.last === 0
+                ? paginationArgs.last
+                : usersLength % paginationArgs.last
             : paginationArgs.first
               ? paginationArgs.first
+              : Prisma.empty
+        }
+        ${
+          unbufferedCursor
+            ? paginationArgs.last
+              ? Prisma.sql`OFFSET ${usersLength - unbufferedCursor + 1}`
+              : Prisma.sql`OFFSET ${unbufferedCursor}`
+            : paginationArgs.last
+              ? Prisma.sql`OFFSET 0`
               : Prisma.empty
         }
       `,
@@ -98,15 +118,28 @@ export class UserService {
       };
     }
 
-    const edges = users.map((user) => ({
-      cursor: Buffer.from(user.id).toString('base64'),
-      node: user,
-    }));
+    const edges = users.map((user, index) => {
+      const cursorIndex =
+        index +
+        1 +
+        (paginationArgs.last
+          ? unbufferedCursor
+            ? unbufferedCursor - paginationArgs.last - 1
+            : usersLength - users.length
+          : unbufferedCursor || 0);
 
-    const startCursor = Buffer.from(users[0].id).toString('base64');
-    const endCursor = Buffer.from(users[users.length - 1].id).toString(
-      'base64',
-    );
+      const bufferedCursor = Buffer.from(cursorIndex.toString())
+        .toString('base64')
+        .split('=')[0];
+
+      return {
+        cursor: bufferedCursor,
+        node: user,
+      };
+    });
+
+    const startCursor = edges[0].cursor;
+    const endCursor = edges[edges.length - 1].cursor;
 
     if (!paginationArgs.first && !paginationArgs.last) {
       return {
@@ -120,26 +153,17 @@ export class UserService {
       };
     }
 
-    const extraItem = await this.prismaService.$queryRaw<
-      Array<Pick<User, 'id'>>
-    >(
-      Prisma.sql`
+    const extraItem = !(
+      paginationArgs.last &&
+      Number(Buffer.from(startCursor, 'base64').toString('utf-8')) <= 1
+    )
+      ? await this.prismaService.$queryRaw<Array<Pick<User, 'id'>>>(
+          Prisma.sql`
         SELECT id
         FROM "User"
         ${
-          paginationArgs.after
-            ? Prisma.sql`WHERE id > ${unbufferedCursor}`
-            : paginationArgs.before
-              ? Prisma.sql`WHERE id < ${unbufferedCursor}`
-              : Prisma.empty
-        }
-        ${
           !!searchArgs.search
-            ? Prisma.sql`${
-                paginationArgs.after || paginationArgs.before
-                  ? Prisma.sql`AND`
-                  : Prisma.sql`WHERE`
-              } (unaccent(name) ILIKE ${`%${searchArgs.search}%`} OR unaccent(email) ILIKE ${`%${searchArgs.search}%`})`
+            ? Prisma.sql`WHERE (unaccent(name) ILIKE ${`%${searchArgs.search}%`} OR unaccent(email) ILIKE ${`%${searchArgs.search}%`})`
             : Prisma.empty
         }
         ${
@@ -155,16 +179,17 @@ export class UserService {
               }`
             : Prisma.empty
         }
-        LIMIT 1
-        ${
+        LIMIT 1 
+        OFFSET ${
           paginationArgs.last
-            ? Prisma.sql`OFFSET ${paginationArgs.last}`
+            ? Prisma.sql`${Number(Buffer.from(startCursor, 'base64').toString('utf-8')) - 2}`
             : paginationArgs.first
-              ? Prisma.sql`OFFSET ${paginationArgs.first}`
-              : Prisma.empty
+              ? Prisma.sql`${Number(Buffer.from(endCursor, 'base64').toString('utf-8'))}`
+              : Prisma.sql`${unbufferedCursor}`
         }
       `,
-    );
+        )
+      : [];
 
     const hasNextPage = paginationArgs.last
       ? !!paginationArgs.before
