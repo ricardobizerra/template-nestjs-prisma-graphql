@@ -55,51 +55,44 @@ export class UserService {
       : undefined;
 
     const users = await this.prismaService.$queryRaw<User[]>(
-      Prisma.sql`
-        SELECT ${Prisma.join(
-          queriedFields.map((field) => Prisma.raw(field)),
-          ', ',
-        )}
-        FROM "User"
-        ${
-          !!searchArgs.search
-            ? Prisma.sql`WHERE (unaccent(name) ILIKE ${`%${searchArgs.search}%`} OR unaccent(email) ILIKE ${`%${searchArgs.search}%`})`
+      Prisma.sql`SELECT ${Prisma.join(
+        queriedFields.map((field) => Prisma.raw(field)),
+        ', ',
+      )} FROM "User"${
+        !!searchArgs.search
+          ? Prisma.sql` WHERE (unaccent(name) ILIKE ${`%${searchArgs.search}%`} OR unaccent(email) ILIKE ${`%${searchArgs.search}%`})`
+          : Prisma.empty
+      }${
+        orderBy
+          ? Prisma.sql` ORDER BY ${Prisma.raw(orderBy)} ${
+              paginationArgs.last
+                ? orderDirection === OrderDirection.Asc
+                  ? Prisma.sql`DESC`
+                  : Prisma.sql`ASC`
+                : orderDirection === OrderDirection.Asc
+                  ? Prisma.sql`ASC`
+                  : Prisma.sql`DESC`
+            }`
+          : Prisma.empty
+      } LIMIT ${
+        paginationArgs.last
+          ? unbufferedCursor
+            ? Prisma.raw(`${paginationArgs.last}`)
+            : usersLength % paginationArgs.last === 0
+              ? Prisma.raw(`${paginationArgs.last}`)
+              : Prisma.raw(`${usersLength % paginationArgs.last}`)
+          : paginationArgs.first
+            ? Prisma.raw(`${paginationArgs.first}`)
             : Prisma.empty
-        }
-        ${
-          orderBy
-            ? Prisma.sql`ORDER BY ${Prisma.raw(orderBy)} ${
-                paginationArgs.last
-                  ? orderDirection === OrderDirection.Asc
-                    ? Prisma.sql`DESC`
-                    : Prisma.sql`ASC`
-                  : orderDirection === OrderDirection.Asc
-                    ? Prisma.sql`ASC`
-                    : Prisma.sql`DESC`
-              }`
+      }${
+        unbufferedCursor
+          ? paginationArgs.last
+            ? Prisma.sql` OFFSET ${Prisma.raw(`${usersLength - unbufferedCursor + 1}`)}`
+            : Prisma.sql` OFFSET ${Prisma.raw(`${unbufferedCursor}`)}`
+          : paginationArgs.last
+            ? Prisma.sql` OFFSET 0`
             : Prisma.empty
-        }
-        LIMIT ${
-          paginationArgs.last
-            ? unbufferedCursor
-              ? paginationArgs.last
-              : usersLength % paginationArgs.last === 0
-                ? paginationArgs.last
-                : usersLength % paginationArgs.last
-            : paginationArgs.first
-              ? paginationArgs.first
-              : Prisma.empty
-        }
-        ${
-          unbufferedCursor
-            ? paginationArgs.last
-              ? Prisma.sql`OFFSET ${usersLength - unbufferedCursor + 1}`
-              : Prisma.sql`OFFSET ${unbufferedCursor}`
-            : paginationArgs.last
-              ? Prisma.sql`OFFSET 0`
-              : Prisma.empty
-        }
-      `,
+      }`,
     );
 
     if (paginationArgs.last) {
@@ -158,36 +151,29 @@ export class UserService {
       Number(Buffer.from(startCursor, 'base64').toString('utf-8')) <= 1
     )
       ? await this.prismaService.$queryRaw<Array<Pick<User, 'id'>>>(
-          Prisma.sql`
-        SELECT id
-        FROM "User"
-        ${
-          !!searchArgs.search
-            ? Prisma.sql`WHERE (unaccent(name) ILIKE ${`%${searchArgs.search}%`} OR unaccent(email) ILIKE ${`%${searchArgs.search}%`})`
-            : Prisma.empty
-        }
-        ${
-          orderBy
-            ? Prisma.sql`ORDER BY ${Prisma.raw(orderBy)} ${
-                paginationArgs.last
-                  ? orderDirection === OrderDirection.Asc
-                    ? Prisma.sql`DESC`
-                    : Prisma.sql`ASC`
-                  : orderDirection === OrderDirection.Asc
-                    ? Prisma.sql`ASC`
-                    : Prisma.sql`DESC`
-              }`
-            : Prisma.empty
-        }
-        LIMIT 1 
-        OFFSET ${
-          paginationArgs.last
-            ? Prisma.sql`${Number(Buffer.from(startCursor, 'base64').toString('utf-8')) - 2}`
-            : paginationArgs.first
-              ? Prisma.sql`${Number(Buffer.from(endCursor, 'base64').toString('utf-8'))}`
-              : Prisma.sql`${unbufferedCursor}`
-        }
-      `,
+          Prisma.sql`SELECT id FROM "User"${
+            !!searchArgs.search
+              ? Prisma.sql` WHERE (unaccent(name) ILIKE ${`%${searchArgs.search}%`} OR unaccent(email) ILIKE ${`%${searchArgs.search}%`})`
+              : Prisma.empty
+          }${
+            orderBy
+              ? Prisma.sql` ORDER BY ${Prisma.raw(orderBy)} ${
+                  paginationArgs.last
+                    ? orderDirection === OrderDirection.Asc
+                      ? Prisma.sql`DESC`
+                      : Prisma.sql`ASC`
+                    : orderDirection === OrderDirection.Asc
+                      ? Prisma.sql`ASC`
+                      : Prisma.sql`DESC`
+                }`
+              : Prisma.empty
+          } LIMIT 1 OFFSET ${
+            paginationArgs.last
+              ? Prisma.sql`${Prisma.raw(`${Number(Buffer.from(startCursor, 'base64').toString('utf-8')) - 2}`)}`
+              : paginationArgs.first
+                ? Prisma.sql`${Prisma.raw(`${Number(Buffer.from(endCursor, 'base64').toString('utf-8'))}`)}`
+                : Prisma.sql`${Prisma.raw(`${unbufferedCursor}`)}`
+          }`,
         )
       : [];
 
