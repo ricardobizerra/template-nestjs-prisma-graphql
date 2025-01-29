@@ -28,15 +28,16 @@ export class UserService {
     searchArgs: SearchArgs;
     ordenationArgs: OrdenationUserArgs;
   }) {
-    const unbufferedCursor = paginationArgs.after
-      ? Number(Buffer.from(paginationArgs.after, 'base64').toString('utf-8'))
-      : paginationArgs.before
-        ? Number(Buffer.from(paginationArgs.before, 'base64').toString('utf-8'))
-        : 0;
-
+    const { after, before, first, last } = paginationArgs;
     const { orderBy, orderDirection = OrderDirection.Asc } = ordenationArgs;
 
-    const usersLengthQuery = paginationArgs.last
+    const unbufferedCursor = after
+      ? Number(Buffer.from(after, 'base64').toString('utf-8'))
+      : before
+        ? Number(Buffer.from(before, 'base64').toString('utf-8'))
+        : 0;
+
+    const usersLengthQuery = last
       ? await this.prismaService.$queryRaw(
           Prisma.sql`
         SELECT COUNT(*)
@@ -65,7 +66,7 @@ export class UserService {
       }${
         orderBy
           ? Prisma.sql` ORDER BY ${Prisma.raw(orderBy)} ${
-              paginationArgs.last
+              last
                 ? orderDirection === OrderDirection.Asc
                   ? Prisma.sql`DESC`
                   : Prisma.sql`ASC`
@@ -75,27 +76,27 @@ export class UserService {
             }`
           : Prisma.empty
       } LIMIT ${
-        paginationArgs.last
+        last
           ? unbufferedCursor
-            ? Prisma.raw(`${paginationArgs.last}`)
-            : usersLength % paginationArgs.last === 0
-              ? Prisma.raw(`${paginationArgs.last}`)
-              : Prisma.raw(`${usersLength % paginationArgs.last}`)
-          : paginationArgs.first
-            ? Prisma.raw(`${paginationArgs.first}`)
+            ? Prisma.raw(`${last}`)
+            : usersLength % last === 0
+              ? Prisma.raw(`${last}`)
+              : Prisma.raw(`${usersLength % last}`)
+          : first
+            ? Prisma.raw(`${first}`)
             : Prisma.empty
       }${
         unbufferedCursor
-          ? paginationArgs.last
+          ? last
             ? Prisma.sql` OFFSET ${Prisma.raw(`${usersLength - unbufferedCursor + 1}`)}`
             : Prisma.sql` OFFSET ${Prisma.raw(`${unbufferedCursor}`)}`
-          : paginationArgs.last
+          : last
             ? Prisma.sql` OFFSET 0`
             : Prisma.empty
       }`,
     );
 
-    if (paginationArgs.last) {
+    if (last) {
       users.reverse();
     }
 
@@ -104,7 +105,7 @@ export class UserService {
         edges: [],
         pageInfo: {
           hasNextPage: false,
-          hasPreviousPage: !!paginationArgs.after,
+          hasPreviousPage: !!after,
           startCursor: null,
           endCursor: null,
         },
@@ -115,9 +116,9 @@ export class UserService {
       const cursorIndex =
         index +
         1 +
-        (paginationArgs.last
+        (last
           ? unbufferedCursor
-            ? unbufferedCursor - paginationArgs.last - 1
+            ? unbufferedCursor - last - 1
             : usersLength - users.length
           : unbufferedCursor || 0);
 
@@ -134,12 +135,12 @@ export class UserService {
     const startCursor = edges[0].cursor;
     const endCursor = edges[edges.length - 1].cursor;
 
-    if (!paginationArgs.first && !paginationArgs.last) {
+    if (!first && !last) {
       return {
         edges,
         pageInfo: {
           hasNextPage: false,
-          hasPreviousPage: !!paginationArgs.after,
+          hasPreviousPage: !!after,
           startCursor,
           endCursor,
         },
@@ -147,8 +148,7 @@ export class UserService {
     }
 
     const extraItem = !(
-      paginationArgs.last &&
-      Number(Buffer.from(startCursor, 'base64').toString('utf-8')) <= 1
+      last && Number(Buffer.from(startCursor, 'base64').toString('utf-8')) <= 1
     )
       ? await this.prismaService.$queryRaw<Array<Pick<User, 'id'>>>(
           Prisma.sql`SELECT id FROM "User"${
@@ -158,7 +158,7 @@ export class UserService {
           }${
             orderBy
               ? Prisma.sql` ORDER BY ${Prisma.raw(orderBy)} ${
-                  paginationArgs.last
+                  last
                     ? orderDirection === OrderDirection.Asc
                       ? Prisma.sql`DESC`
                       : Prisma.sql`ASC`
@@ -168,22 +168,18 @@ export class UserService {
                 }`
               : Prisma.empty
           } LIMIT 1 OFFSET ${
-            paginationArgs.last
+            last
               ? Prisma.sql`${Prisma.raw(`${Number(Buffer.from(startCursor, 'base64').toString('utf-8')) - 2}`)}`
-              : paginationArgs.first
+              : first
                 ? Prisma.sql`${Prisma.raw(`${Number(Buffer.from(endCursor, 'base64').toString('utf-8'))}`)}`
                 : Prisma.sql`${Prisma.raw(`${unbufferedCursor}`)}`
           }`,
         )
       : [];
 
-    const hasNextPage = paginationArgs.last
-      ? !!paginationArgs.before
-      : !!extraItem?.length;
+    const hasNextPage = last ? !!before : !!extraItem?.length;
 
-    const hasPreviousPage = paginationArgs.last
-      ? !!extraItem?.length
-      : !!paginationArgs.after;
+    const hasPreviousPage = last ? !!extraItem?.length : !!after;
 
     const pageInfo = {
       hasNextPage,
