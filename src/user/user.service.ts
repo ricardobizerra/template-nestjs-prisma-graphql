@@ -39,15 +39,11 @@ export class UserService {
 
     const usersLengthQuery = last
       ? await this.prismaService.$queryRaw(
-          Prisma.sql`
-        SELECT COUNT(*)
-        FROM "User"
-        ${
-          !!searchArgs.search
-            ? Prisma.sql`WHERE (unaccent(name) ILIKE ${`%${searchArgs.search}%`} OR unaccent(email) ILIKE ${`%${searchArgs.search}%`})`
-            : Prisma.empty
-        }
-      `,
+          Prisma.sql`SELECT COUNT(*) FROM "User"${
+            !!searchArgs.search
+              ? Prisma.sql` WHERE (unaccent(name) ILIKE ${`%${searchArgs.search}%`} OR unaccent(email) ILIKE ${`%${searchArgs.search}%`})`
+              : Prisma.empty
+          }`,
         )
       : undefined;
 
