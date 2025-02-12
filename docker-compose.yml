@@ -24,12 +24,16 @@ services:
     restart: always
     env_file:
       - .env
+    command:
+      - /bin/sh
+      - -c
+      - redis-server --requirepass "$${REDIS_PASSWORD:?REDIS_PASSWORD variable is not set}"
     environment:
       - REDIS_PORT=${REDIS_PORT}
       - REDIS_HOST=${REDIS_HOST}
-      - REDIS_USER=${REDIS_USER}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - REDIS_DB=${REDIS_DB}
+      - REDIS_TTL=${REDIS_TTL}
       - REDIS_URL=${REDIS_URL}
     volumes:
       - redis:/data

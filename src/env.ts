@@ -19,10 +19,10 @@ export const envSchema = z.object({
 
   REDIS_PORT: z.coerce.number().optional().default(6379),
   REDIS_HOST: z.coerce.string(),
-  REDIS_USER: z.coerce.string(),
   REDIS_PASSWORD: z.coerce.string(),
   REDIS_DB: z.coerce.number().optional().default(0),
   REDIS_URL: z.coerce.string(),
+  REDIS_TTL: z.coerce.number().optional().default(3600),
 
   JWT_SECRET: z.coerce.string(),
   JWT_EXPIRES_IN_SECONDS: z.coerce.number(),
