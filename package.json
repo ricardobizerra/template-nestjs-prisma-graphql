@@ -39,6 +39,7 @@
     "cache-manager": "^6.4.0",
     "cache-manager-redis-store": "^3.0.1",
     "class-transformer": "^0.5.1",
+    "date-fns": "^4.1.0",
     "graphql": "^16.9.0",
     "graphql-redis-subscriptions": "^2.6.1",
     "graphql-subscriptions": "^3.0.0",
