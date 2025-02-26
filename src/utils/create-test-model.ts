@@ -1,7 +1,7 @@
 import { PrismaModule } from '@/lib/prisma/prisma.module';
 import { PrismaService } from '@/lib/prisma/prisma.service';
 import { RedisModule } from '@/lib/redis/redis.module';
-import { RedisService } from '@/lib/redis/redis.service';
+import { RedisSubscriptionService } from '@/lib/redis/redis-subscription.service';
 import { ModuleMetadata } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -19,7 +19,7 @@ export const createTestModel = async (
     ],
     providers: [
       ...(!!metadata.providers ? metadata.providers : []),
-      RedisService,
+      RedisSubscriptionService,
       PrismaService,
       ConfigService,
     ],

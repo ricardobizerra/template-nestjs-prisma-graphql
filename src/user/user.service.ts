@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
 import { UserCreateInput } from '@/lib/graphql/prisma-client';
 import { PrismaService } from '@/lib/prisma/prisma.service';
-import { RedisService } from '@/lib/redis/redis.service';
+import { RedisSubscriptionService } from '@/lib/redis/redis-subscription.service';
 import { selectObject } from '@/utils/select-object';
 import { genSalt, hash } from 'bcryptjs';
 import { PaginationArgs } from '@/utils/args/pagination.args';
@@ -14,7 +14,7 @@ import { OrderDirection } from '@/utils/args/ordenation.args';
 export class UserService {
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly redisService: RedisService,
+    private readonly redisSubscriptionService: RedisSubscriptionService,
   ) {}
 
   async findMany({
@@ -215,7 +215,7 @@ export class UserService {
     });
 
     if (!!createdUser) {
-      this.redisService.publish('userAdded', { userAdded: data });
+      this.redisSubscriptionService.publish('userAdded', { userAdded: data });
     }
 
     return createdUser;

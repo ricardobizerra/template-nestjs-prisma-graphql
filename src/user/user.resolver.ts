@@ -11,7 +11,7 @@ import { UserService } from '@/user/user.service';
 import { GraphQLError, GraphQLResolveInfo } from 'graphql';
 import { getQueriedFields } from '@/utils/get-queried-fields';
 import { Role, UserCreateInput } from '@/lib/graphql/prisma-client';
-import { RedisService } from '@/lib/redis/redis.service';
+import { RedisSubscriptionService } from '@/lib/redis/redis-subscription.service';
 import { OrdenationUserArgs, UserModel } from '@/user/models/user.model';
 import { Auth } from '@/auth/auth.decorator';
 import { CurrentUser } from './user.decorator';
@@ -25,7 +25,7 @@ import { SearchArgs } from '@/utils/args/search.args';
 export class UserResolver {
   constructor(
     private readonly userService: UserService,
-    private readonly redisService: RedisService,
+    private readonly redisSubscriptionService: RedisSubscriptionService,
     private readonly authService: AuthService,
   ) {}
 
@@ -73,6 +73,6 @@ export class UserResolver {
     name: 'userAdded',
   })
   subscribeToUserAdded() {
-    return this.redisService.asyncIterator('userAdded');
+    return this.redisSubscriptionService.asyncIterator('userAdded');
   }
 }
