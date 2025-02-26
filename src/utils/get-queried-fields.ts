@@ -1,10 +1,10 @@
 import { FieldNode, GraphQLResolveInfo, SelectionSetNode } from 'graphql';
 
-export function getQueriedFields(
+export function getQueriedFields<TModel extends Record<string, any>>(
   info: GraphQLResolveInfo,
   fieldName: string,
   paginatedQuery = true,
-): string[] {
+): (keyof TModel)[] {
   const fieldNode = info.fieldNodes.find(
     (node) => node.name.value === fieldName,
   );
@@ -26,10 +26,10 @@ export function getQueriedFields(
       return [];
     }
 
-    return extractFields(nodeField.selectionSet);
+    return extractFields(nodeField.selectionSet, info);
   }
 
-  return extractFields(fieldNode.selectionSet);
+  return extractFields(fieldNode.selectionSet, info);
 }
 
 const findFieldByName = (
@@ -42,14 +42,23 @@ const findFieldByName = (
   );
 };
 
-const extractFields = (selectionSet: any): string[] => {
-  const fields: string[] = [];
+const extractFields = <TModel>(
+  selectionSet: SelectionSetNode,
+  info: GraphQLResolveInfo,
+): (keyof TModel)[] => {
+  const fields: (keyof TModel)[] = [];
 
   for (const selection of selectionSet.selections) {
     if (selection.kind === 'Field' && !selection.name.value.startsWith('_')) {
-      fields.push(selection.name.value);
+      fields.push(selection.name.value as keyof TModel);
     } else if (selection.kind === 'InlineFragment' && selection.selectionSet) {
-      fields.push(...extractFields(selection.selectionSet));
+      fields.push(...extractFields(selection.selectionSet, info));
+    } else if (selection.kind === 'FragmentSpread') {
+      const fragment = info.fragments[selection.name.value];
+
+      if (fragment) {
+        fields.push(...extractFields(fragment.selectionSet, info));
+      }
     }
   }
 
