@@ -34,7 +34,7 @@
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-express": "^10.0.0",
-    "@prisma/client": "5.22.0",
+    "@prisma/client": "6.5.0",
     "bcryptjs": "^2.4.3",
     "cache-manager": "^6.4.0",
     "cache-manager-redis-store": "^3.0.1",
