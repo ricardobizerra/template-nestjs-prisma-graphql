@@ -17,8 +17,6 @@ async function bootstrap() {
     optionsSuccessStatus: 204,
   });
 
-  const port = configService.get('PORT', { infer: true });
-
-  await app.listen(port ?? 3333);
+  await app.listen(3333);
 }
 bootstrap();
