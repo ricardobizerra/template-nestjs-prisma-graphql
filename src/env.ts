@@ -1,12 +1,14 @@
 import { z } from 'zod';
 
 const ambients = ['development', 'staging', 'production', 'test'] as const;
+const developmentTypes = ['local', 'deploy'] as const;
 
 export const envSchema = z.object({
   APP_NAME: z.coerce.string().optional().default('rblf'),
 
   PORT: z.coerce.number().optional().default(3333),
-  NODE_ENV: z.enum(ambients).default('development'),
+  NODE_ENV: z.enum(ambients),
+  DEVELOPMENT_TYPE: z.enum(developmentTypes),
 
   FRONTEND_URL: z.coerce.string(),
 
