@@ -1,13 +1,16 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
+import { createTestModel } from '@/utils/create-test-model';
+import { UserModule } from '@/user/user.module';
 
 describe('AuthService', () => {
   let service: AuthService;
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    const module: TestingModule = await createTestModel({
+      imports: [UserModule],
       providers: [AuthService],
-    }).compile();
+    });
 
     service = module.get<AuthService>(AuthService);
   });
