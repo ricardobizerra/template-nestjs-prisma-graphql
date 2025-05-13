@@ -34,6 +34,18 @@ jobs:
         ports:
           - 5432:5432
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis
+        env:
+          REDIS_HOST: localhost
+          REDIS_PASSWORD: fake-password
+          REDIS_URL: redis://localhost:6379
+        command:
+          - /bin/sh
+          - -c
+          - redis-server --requirepass "$${REDIS_PASSWORD:?REDIS_PASSWORD variable is not set}"
+        ports:
+          - 6379:6379
     steps:
       - uses: actions/checkout@v3
       - name: Use Node.js 20
