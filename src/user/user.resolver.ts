@@ -36,7 +36,7 @@ export class UserResolver {
     @Args() ordenationArgs: OrdenationUserArgs,
     @Info() info: GraphQLResolveInfo,
   ) {
-    const queriedFields = getQueriedFields(info, 'users');
+    const queriedFields = getQueriedFields<UserModel>(info, 'users');
     return this.userService.findMany({
       queriedFields,
       paginationArgs,
