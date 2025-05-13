@@ -14,7 +14,7 @@ type RequiredHashFields<TDatabase, TModel> =
         DEFAULT?: (keyof TDatabase)[];
       };
 
-type SelectObjectParams<TDatabase, TModel> =
+export type SelectObjectParams<TDatabase, TModel> =
   ExtraModelFields<TDatabase, TModel> extends never
     ? [
         queriedFields: (keyof TModel)[],
