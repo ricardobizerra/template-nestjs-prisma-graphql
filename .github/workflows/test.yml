@@ -50,5 +50,9 @@ jobs:
           node-version: 20
       - name: Install dependencies and packages
         run: yarn install
+      - name: Run migrations
+        run: yarn migration:dev
+      - name: Run database types generation
+        run: yarn generate
       - name: Run the test Script
         run: yarn test
