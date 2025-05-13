@@ -40,10 +40,6 @@ jobs:
           REDIS_HOST: localhost
           REDIS_PASSWORD: fake-password
           REDIS_URL: redis://localhost:6379
-        command:
-          - /bin/sh
-          - -c
-          - redis-server --requirepass "$${REDIS_PASSWORD:?REDIS_PASSWORD variable is not set}"
         ports:
           - 6379:6379
     steps:
