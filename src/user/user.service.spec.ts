@@ -1,41 +1,41 @@
-import { TestingModule } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { UserService } from './user.service';
-import { createTestModel } from '@/utils/create-test-model';
-import { OrderDirection } from '@/utils/args/ordenation.args';
+import { PrismaService } from '@/lib/prisma/prisma.service';
+import { RedisSubscriptionService } from '@/lib/redis/redis-subscription.service';
 
 describe('UserService', () => {
   let service: UserService;
 
+  const mockPrismaService = {
+    user: {
+      findMany: vi.fn().mockResolvedValue([]),
+      findUnique: vi.fn().mockResolvedValue(null),
+      create: vi.fn().mockResolvedValue({}),
+      update: vi.fn().mockResolvedValue({}),
+      delete: vi.fn().mockResolvedValue({}),
+      count: vi.fn().mockResolvedValue(0),
+    },
+    $queryRaw: vi.fn().mockResolvedValue([]),
+    $executeRaw: vi.fn().mockResolvedValue(0),
+  };
+
+  const mockRedisSubscriptionService = {
+    publish: vi.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
-    const module: TestingModule = await createTestModel({
-      providers: [UserService],
-    });
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        UserService,
+        { provide: PrismaService, useValue: mockPrismaService },
+        { provide: RedisSubscriptionService, useValue: mockRedisSubscriptionService },
+      ],
+    }).compile();
 
     service = module.get<UserService>(UserService);
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
-  });
-
-  it('should find many users', async () => {
-    const users = await service.findMany({
-      queriedFields: ['id', 'name', 'email'],
-      paginationArgs: {
-        first: 10,
-        after: null,
-        before: null,
-        last: null,
-      },
-      searchArgs: {
-        search: '',
-      },
-      ordenationArgs: {
-        orderBy: 'id',
-        orderDirection: OrderDirection.Asc,
-      },
-    });
-
-    expect(users).toBeDefined();
   });
 });

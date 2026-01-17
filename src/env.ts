@@ -19,6 +19,13 @@ export const envSchema = z.object({
   POSTGRES_PORT: z.coerce.number().optional().default(5432),
   DATABASE_URL: z.coerce.string(),
 
+  POSTGRES_TEST_USER: z.coerce.string(),
+  POSTGRES_TEST_PASSWORD: z.coerce.string(),
+  POSTGRES_TEST_DB: z.coerce.string(),
+  POSTGRES_TEST_HOST: z.coerce.string(),
+  POSTGRES_TEST_PORT: z.coerce.number().optional().default(5433),
+  DATABASE_TEST_URL: z.coerce.string(),
+
   REDIS_PORT: z.coerce.number().optional().default(6379),
   REDIS_HOST: z.coerce.string(),
   REDIS_PASSWORD: z.coerce.string(),

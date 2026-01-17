@@ -1,10 +1,8 @@
-version: '3.8'
-
 services:
   postgres:
     container_name: ${APP_NAME}-postgres
     image: postgres
-    restart: always
+    restart: unless-stopped
     env_file:
       - .env
     environment:
@@ -13,16 +11,16 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_PORT=${POSTGRES_PORT}
       - POSTGRES_HOST=${POSTGRES_HOST}
-    command: ["postgres", "-c", "log_statement=all"]
+    command: ["postgres", "-p", "${POSTGRES_PORT}", "-c", "log_statement=all"]
     volumes:
       - postgres:/var/lib/postgresql/data
     ports:
-      - '5432:5432'
+      - '${POSTGRES_PORT}:5432'
 
   redis:
     container_name: ${APP_NAME}-redis
     image: redis
-    restart: always
+    restart: unless-stopped
     env_file:
       - .env
     command:
