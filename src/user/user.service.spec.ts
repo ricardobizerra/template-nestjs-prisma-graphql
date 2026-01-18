@@ -28,7 +28,10 @@ describe('UserService', () => {
       providers: [
         UserService,
         { provide: PrismaService, useValue: mockPrismaService },
-        { provide: RedisSubscriptionService, useValue: mockRedisSubscriptionService },
+        {
+          provide: RedisSubscriptionService,
+          useValue: mockRedisSubscriptionService,
+        },
       ],
     }).compile();
 

@@ -1,15 +1,33 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
-import { UserCreateInput } from '@/lib/graphql/prisma-client';
 import { PrismaService } from '@/lib/prisma/prisma.service';
 import { RedisSubscriptionService } from '@/lib/redis/redis-subscription.service';
-import { selectObject } from '@/utils/select-object';
 import { genSalt, hash } from 'bcryptjs';
-import { PaginationArgs } from '@/utils/args/pagination.args';
-import { SearchArgs } from '@/utils/args/search.args';
-import { OrdenationUserArgs, UserModel } from './models/user.model';
-import { OrderDirection } from '@/utils/args/ordenation.args';
 import { PaginatedFindMany } from '@/utils/paginated-find-many';
+import { UserModel } from './models/user.model';
+
+interface FindManyArgs {
+  paginationArgs: {
+    first: number | null;
+    after: string | null;
+    before: string | null;
+    last: number | null;
+  };
+  searchArgs: {
+    search: string;
+  };
+  ordenationArgs: {
+    orderBy: string;
+    orderDirection: 'asc' | 'desc';
+  };
+}
+
+interface CreateUserInput {
+  email: string;
+  password: string;
+  name: string;
+  role: 'ADMIN' | 'USER';
+}
 
 @Injectable()
 export class UserService {
@@ -18,17 +36,10 @@ export class UserService {
     private readonly redisSubscriptionService: RedisSubscriptionService,
   ) {}
 
-  async findMany({
-    queriedFields,
-    paginationArgs,
-    searchArgs,
-    ordenationArgs,
-  }: {
-    queriedFields: (keyof UserModel)[];
-    paginationArgs: PaginationArgs;
-    searchArgs: SearchArgs;
-    ordenationArgs: OrdenationUserArgs;
-  }) {
+  async findMany({ paginationArgs, searchArgs, ordenationArgs }: FindManyArgs) {
+    // For REST, we select all user fields (excluding password)
+    const queriedFields: (keyof UserModel)[] = ['id', 'email', 'name', 'role'];
+
     const paginatedFindMany = new PaginatedFindMany<User, UserModel>(
       this.prismaService,
       this.redisSubscriptionService,
@@ -75,7 +86,7 @@ export class UserService {
     });
   }
 
-  async create(data: UserCreateInput) {
+  async create(data: CreateUserInput) {
     const salt = await genSalt(10);
     const hashedPassword = await hash(data.password, salt);
 
@@ -83,14 +94,14 @@ export class UserService {
       data: { ...data, password: hashedPassword },
     });
 
-    if (!!createdUser) {
+    if (createdUser) {
       this.redisSubscriptionService.publish('userAdded', { userAdded: data });
     }
 
     return createdUser;
   }
 
-  async update(id: string, data: UserCreateInput) {
+  async update(id: string, data: CreateUserInput) {
     return this.prismaService.user.update({
       where: {
         id,

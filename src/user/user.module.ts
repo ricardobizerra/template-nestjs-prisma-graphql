@@ -1,11 +1,12 @@
 import { Global, Module } from '@nestjs/common';
-import { UserResolver } from '@/user/user.resolver';
+import { UserController } from '@/user/user.controller';
 import { UserService } from '@/user/user.service';
 import { AuthModule } from '@/auth/auth.module';
 
 @Global()
 @Module({
-  providers: [UserResolver, UserService],
+  controllers: [UserController],
+  providers: [UserService],
   exports: [UserService],
   imports: [AuthModule],
 })

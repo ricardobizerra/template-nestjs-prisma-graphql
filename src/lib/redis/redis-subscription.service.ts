@@ -1,13 +1,12 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { RedisPubSub } from 'graphql-redis-subscriptions';
 import Redis, { RedisOptions } from 'ioredis';
 
 @Injectable()
-export class RedisSubscriptionService
-  extends RedisPubSub
-  implements OnModuleInit
-{
+export class RedisSubscriptionService implements OnModuleInit {
+  private publisher: Redis;
+  private subscriber: Redis;
+
   constructor(private readonly configService: ConfigService) {
     const options: RedisOptions = {
       host: configService.get('REDIS_HOST'),
@@ -16,13 +15,23 @@ export class RedisSubscriptionService
       db: configService.get('REDIS_DB'),
     };
 
-    super({
-      publisher: new Redis(options),
-      subscriber: new Redis(options),
-    });
+    this.publisher = new Redis(options);
+    this.subscriber = new Redis(options);
   }
 
   async onModuleInit() {
-    await this.getSubscriber().subscribe('EVENTS');
+    await this.subscriber.subscribe('EVENTS');
+  }
+
+  async publish(channel: string, message: unknown) {
+    await this.publisher.publish(channel, JSON.stringify(message));
+  }
+
+  getSubscriber() {
+    return this.subscriber;
+  }
+
+  getPublisher() {
+    return this.publisher;
   }
 }

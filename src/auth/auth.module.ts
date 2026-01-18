@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { AuthResolver } from './auth.resolver';
+import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -14,7 +14,8 @@ import { JwtStrategy } from './jwt.strategy';
       signOptions: { expiresIn: Number(process.env.JWT_EXPIRES_IN_SECONDS) },
     }),
   ],
-  providers: [AuthResolver, AuthService, JwtStrategy],
+  controllers: [AuthController],
+  providers: [AuthService, JwtStrategy],
   exports: [AuthService],
 })
 export class AuthModule {}

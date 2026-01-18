@@ -1,7 +1,3 @@
-import { ArgsType, Field } from '@nestjs/graphql';
-
-@ArgsType()
-export class SearchArgs {
-  @Field(() => String, { nullable: true })
+export interface SearchArgs {
   search: string;
 }
