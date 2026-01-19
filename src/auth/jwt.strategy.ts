@@ -5,6 +5,18 @@ import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { JwtPayload } from './interfaces/jwt.interface';
 import { UserModel } from '@/user/models/user.model';
+import { Request } from 'express';
+
+// Custom extractor that checks cookie first, then Authorization header
+const cookieOrBearerExtractor = (req: Request): string | null => {
+  // Try cookie first
+  if (req?.cookies?.accessToken) {
+    return req.cookies.accessToken;
+  }
+
+  // Fallback to Authorization header
+  return ExtractJwt.fromAuthHeaderAsBearerToken()(req);
+};
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
@@ -13,7 +25,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     readonly configService: ConfigService,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: cookieOrBearerExtractor,
       ignoreExpiration: false,
       secretOrKey: configService.get('JWT_SECRET'),
     });
