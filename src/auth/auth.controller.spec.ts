@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { ConfigService } from '@nestjs/config';
-import { Response } from 'express';
+import { FastifyReply } from 'fastify';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -11,13 +11,18 @@ describe('AuthController', () => {
     generateToken: ReturnType<typeof vi.fn>;
   };
   let mockConfigService: { get: ReturnType<typeof vi.fn> };
-  let mockResponse: Partial<Response>;
+  let mockResponse: Partial<FastifyReply>;
 
   beforeEach(async () => {
     mockAuthService = {
       signIn: vi.fn().mockResolvedValue({
         accessToken: 'token',
-        user: { id: '1', email: 'test@example.com', name: 'Test', role: 'USER' },
+        user: {
+          id: '1',
+          email: 'test@example.com',
+          name: 'Test',
+          role: 'USER',
+        },
       }),
       generateToken: vi.fn().mockReturnValue('generated-token'),
     };
@@ -32,9 +37,9 @@ describe('AuthController', () => {
     };
 
     mockResponse = {
-      cookie: vi.fn().mockReturnThis(),
+      setCookie: vi.fn().mockReturnThis(),
       clearCookie: vi.fn().mockReturnThis(),
-      json: vi.fn().mockReturnThis(),
+      send: vi.fn().mockReturnThis(),
       redirect: vi.fn().mockReturnThis(),
     };
 
@@ -56,7 +61,7 @@ describe('AuthController', () => {
   it('should sign in a user and set cookie', async () => {
     await controller.signIn(
       { username: 'test@example.com', password: 'password123' },
-      mockResponse as Response,
+      mockResponse as FastifyReply,
     );
 
     expect(mockAuthService.signIn).toHaveBeenCalledWith(
@@ -64,7 +69,7 @@ describe('AuthController', () => {
       'password123',
     );
     expect(mockAuthService.generateToken).toHaveBeenCalled();
-    expect(mockResponse.cookie).toHaveBeenCalledWith(
+    expect(mockResponse.setCookie).toHaveBeenCalledWith(
       'accessToken',
       'generated-token',
       expect.objectContaining({
@@ -72,11 +77,11 @@ describe('AuthController', () => {
         sameSite: 'lax',
       }),
     );
-    expect(mockResponse.json).toHaveBeenCalled();
+    expect(mockResponse.send).toHaveBeenCalled();
   });
 
   it('should sign out and clear cookie', async () => {
-    await controller.signOut(mockResponse as Response);
+    await controller.signOut(mockResponse as FastifyReply);
 
     expect(mockResponse.clearCookie).toHaveBeenCalledWith(
       'accessToken',
@@ -84,7 +89,7 @@ describe('AuthController', () => {
         httpOnly: true,
       }),
     );
-    expect(mockResponse.json).toHaveBeenCalledWith({
+    expect(mockResponse.send).toHaveBeenCalledWith({
       message: 'Logged out successfully',
     });
   });

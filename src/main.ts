@@ -1,27 +1,32 @@
 import { NestFactory } from '@nestjs/core';
+import {
+  FastifyAdapter,
+  NestFastifyApplication,
+} from '@nestjs/platform-fastify';
 import { AppModule } from '@/app.module';
 import { ConfigService } from '@nestjs/config';
 import { Env } from '@/env';
-import cookieParser from 'cookie-parser';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { Request, Response, NextFunction } from 'express';
+import fastifyCookie from '@fastify/cookie';
+import fastifyCors from '@fastify/cors';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestFastifyApplication>(
+    AppModule,
+    new FastifyAdapter(),
+  );
 
   const configService = app.get<ConfigService<Env, true>>(ConfigService);
 
   const nodeEnv = configService.get('NODE_ENV', { infer: true });
   const swaggerAccessKey = configService.get('SWAGGER_ACCESS_KEY');
+  const frontendUrl = configService.get('FRONTEND_URL');
 
-  app.use(cookieParser());
+  await app.register(fastifyCookie);
 
-  app.enableCors({
-    origin:
-      nodeEnv === 'development' ? true : configService.get('FRONTEND_URL'),
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    preflightContinue: false,
-    optionsSuccessStatus: 204,
+  await app.register(fastifyCors, {
+    origin: nodeEnv === 'development' ? true : frontendUrl,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
     credentials: true,
   });
 
@@ -40,19 +45,16 @@ async function bootstrap() {
     SwaggerModule.setup('api/docs', app, document);
   } else if (swaggerAccessKey) {
     // JSON-only endpoint with access key in staging/production
-    app.use(
-      '/api/docs-json',
-      (req: Request, res: Response, next: NextFunction) => {
-        const key = req.query['key'] || req.headers['x-swagger-key'];
-        if (key === swaggerAccessKey) {
-          res.json(document);
-        } else {
-          res.status(403).json({ message: 'Forbidden' });
-        }
-      },
-    );
+    app.getHttpAdapter().get('/api/docs-json', (req, reply) => {
+      const key = req.query['key'] || req.headers['x-swagger-key'];
+      if (key === swaggerAccessKey) {
+        reply.send(document);
+      } else {
+        reply.status(403).send({ message: 'Forbidden' });
+      }
+    });
   }
 
-  await app.listen(3333);
+  await app.listen(3333, '0.0.0.0');
 }
 bootstrap();

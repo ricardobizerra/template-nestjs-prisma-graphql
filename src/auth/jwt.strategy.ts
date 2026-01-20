@@ -5,17 +5,17 @@ import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { JwtPayload } from './interfaces/jwt.interface';
 import { UserModel } from '@/user/models/user.model';
-import { Request } from 'express';
+import { FastifyRequest } from 'fastify';
 
 // Custom extractor that checks cookie first, then Authorization header
-const cookieOrBearerExtractor = (req: Request): string | null => {
+const cookieOrBearerExtractor = (req: FastifyRequest): string | null => {
   // Try cookie first
   if (req?.cookies?.accessToken) {
     return req.cookies.accessToken;
   }
 
   // Fallback to Authorization header
-  return ExtractJwt.fromAuthHeaderAsBearerToken()(req);
+  return ExtractJwt.fromAuthHeaderAsBearerToken()(req as any);
 };
 
 @Injectable()
