@@ -12,7 +12,6 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "start:worker": "nest start --entryFile worker --watch",
     "migration:dev": "prisma migrate dev",
     "migration:deploy": "prisma migrate deploy",
     "generate": "prisma generate",
