@@ -38,7 +38,7 @@ services:
       - redis:/data
     ports:
       - '6379:6379'
-  
+
   api:
     container_name: ${APP_NAME}-api
     build:
@@ -55,6 +55,21 @@ services:
       - .env
     ports:
       - ${PORT}:3333
+
+  worker:
+    container_name: ${APP_NAME}-worker
+    build:
+      dockerfile: Dockerfile
+      context: .
+      target: ${DEVELOPMENT_TYPE}
+    command: ["yarn", "start:worker"]
+    depends_on:
+      - redis
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    env_file:
+      - .env
 
 volumes:
   postgres:
