@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, User } from '@prisma/client';
+import { OAuthProvider, User } from '@prisma/client';
 import { PrismaService } from '@/lib/prisma/prisma.service';
 import { RedisSubscriptionService } from '@/lib/redis/redis-subscription.service';
 import { genSalt, hash } from 'bcryptjs';
@@ -29,6 +29,13 @@ interface CreateUserInput {
   role: 'ADMIN' | 'USER';
 }
 
+interface CreateWithOAuthInput {
+  email: string;
+  name: string;
+  provider: OAuthProvider;
+  providerId: string;
+}
+
 @Injectable()
 export class UserService {
   constructor(
@@ -37,7 +44,6 @@ export class UserService {
   ) {}
 
   async findMany({ paginationArgs, searchArgs, ordenationArgs }: FindManyArgs) {
-    // For REST, we select all user fields (excluding password)
     const queriedFields: (keyof UserModel)[] = ['id', 'email', 'name', 'role'];
 
     const paginatedFindMany = new PaginatedFindMany<User, UserModel>(
@@ -72,16 +78,53 @@ export class UserService {
 
   async findOne(id: string) {
     return this.prismaService.user.findUnique({
-      where: {
-        id,
-      },
+      where: { id },
     });
   }
 
   async findByEmail(email: string) {
     return this.prismaService.user.findUnique({
+      where: { email },
+    });
+  }
+
+  async findByOAuthAccount(provider: OAuthProvider, providerId: string) {
+    const oauthAccount = await this.prismaService.oAuthAccount.findUnique({
       where: {
-        email,
+        provider_providerId: { provider, providerId },
+      },
+      include: { user: true },
+    });
+
+    return oauthAccount?.user || null;
+  }
+
+  async linkOAuthAccount(
+    userId: string,
+    provider: OAuthProvider,
+    providerId: string,
+  ) {
+    return this.prismaService.oAuthAccount.create({
+      data: {
+        provider,
+        providerId,
+        userId,
+      },
+    });
+  }
+
+  async createWithOAuth(data: CreateWithOAuthInput) {
+    return this.prismaService.user.create({
+      data: {
+        email: data.email,
+        name: data.name,
+        role: 'USER',
+        oauthAccounts: {
+          create: {
+            provider: data.provider,
+            providerId: data.providerId,
+          },
+        },
       },
     });
   }
@@ -103,9 +146,7 @@ export class UserService {
 
   async update(id: string, data: CreateUserInput) {
     return this.prismaService.user.update({
-      where: {
-        id,
-      },
+      where: { id },
       data,
     });
   }

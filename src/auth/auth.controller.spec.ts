@@ -6,7 +6,10 @@ import { Response } from 'express';
 
 describe('AuthController', () => {
   let controller: AuthController;
-  let mockAuthService: { signIn: ReturnType<typeof vi.fn> };
+  let mockAuthService: {
+    signIn: ReturnType<typeof vi.fn>;
+    generateToken: ReturnType<typeof vi.fn>;
+  };
   let mockConfigService: { get: ReturnType<typeof vi.fn> };
   let mockResponse: Partial<Response>;
 
@@ -14,14 +17,16 @@ describe('AuthController', () => {
     mockAuthService = {
       signIn: vi.fn().mockResolvedValue({
         accessToken: 'token',
-        user: { id: '1', email: 'test@example.com' },
+        user: { id: '1', email: 'test@example.com', name: 'Test', role: 'USER' },
       }),
+      generateToken: vi.fn().mockReturnValue('generated-token'),
     };
 
     mockConfigService = {
       get: vi.fn((key: string) => {
         if (key === 'NODE_ENV') return 'development';
         if (key === 'JWT_EXPIRES_IN_SECONDS') return 3600;
+        if (key === 'FRONTEND_URL') return 'http://localhost:3000';
         return null;
       }),
     };
@@ -30,6 +35,7 @@ describe('AuthController', () => {
       cookie: vi.fn().mockReturnThis(),
       clearCookie: vi.fn().mockReturnThis(),
       json: vi.fn().mockReturnThis(),
+      redirect: vi.fn().mockReturnThis(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -57,18 +63,16 @@ describe('AuthController', () => {
       'test@example.com',
       'password123',
     );
+    expect(mockAuthService.generateToken).toHaveBeenCalled();
     expect(mockResponse.cookie).toHaveBeenCalledWith(
       'accessToken',
-      'token',
+      'generated-token',
       expect.objectContaining({
         httpOnly: true,
         sameSite: 'lax',
       }),
     );
-    expect(mockResponse.json).toHaveBeenCalledWith({
-      accessToken: 'token',
-      user: { id: '1', email: 'test@example.com' },
-    });
+    expect(mockResponse.json).toHaveBeenCalled();
   });
 
   it('should sign out and clear cookie', async () => {

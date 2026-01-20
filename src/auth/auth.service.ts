@@ -5,6 +5,7 @@ import { compare } from 'bcryptjs';
 import { SignIn } from './models/sign-in.model';
 import { userWithoutPassword } from '@/utils/user-without-password';
 import { UserModel } from '@/user/models/user.model';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -23,7 +24,14 @@ export class AuthService {
       throw new UnauthorizedException();
     }
 
-    const passwordCheck = await compare(password, user?.password);
+    // OAuth-only users don't have a password
+    if (!user.password) {
+      throw new UnauthorizedException(
+        'This account uses OAuth login. Please sign in with Google.',
+      );
+    }
+
+    const passwordCheck = await compare(password, user.password);
 
     if (!passwordCheck) {
       throw new UnauthorizedException();
@@ -42,15 +50,21 @@ export class AuthService {
     return userWithoutPassword(user);
   }
 
+  generateToken(user: User | UserModel): string {
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    };
+
+    return this.jwtService.sign(payload);
+  }
+
   async signIn(email: string, password: string): Promise<SignIn> {
     const user = await this.validateEmailAndPassword(email, password);
 
-    const payload = {
-      sub: user.id,
-      ...user,
-    };
-
-    const accessToken = await this.jwtService.signAsync(payload);
+    const accessToken = this.generateToken(user);
 
     return {
       accessToken,

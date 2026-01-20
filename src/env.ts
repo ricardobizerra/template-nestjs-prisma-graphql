@@ -19,13 +19,6 @@ export const envSchema = z.object({
   POSTGRES_PORT: z.coerce.number().optional().default(5432),
   DATABASE_URL: z.coerce.string(),
 
-  POSTGRES_TEST_USER: z.coerce.string(),
-  POSTGRES_TEST_PASSWORD: z.coerce.string(),
-  POSTGRES_TEST_DB: z.coerce.string(),
-  POSTGRES_TEST_HOST: z.coerce.string(),
-  POSTGRES_TEST_PORT: z.coerce.number().optional().default(5433),
-  DATABASE_TEST_URL: z.coerce.string(),
-
   REDIS_PORT: z.coerce.number().optional().default(6379),
   REDIS_HOST: z.coerce.string(),
   REDIS_PASSWORD: z.coerce.string(),
@@ -35,6 +28,10 @@ export const envSchema = z.object({
 
   JWT_SECRET: z.coerce.string(),
   JWT_EXPIRES_IN_SECONDS: z.coerce.number(),
+
+  GOOGLE_CLIENT_ID: z.string(),
+  GOOGLE_CLIENT_SECRET: z.string(),
+  GOOGLE_CALLBACK_URL: z.string(),
 });
 
 export type Env = z.infer<typeof envSchema>;
