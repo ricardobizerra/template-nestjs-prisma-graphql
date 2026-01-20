@@ -35,6 +35,8 @@ export const envSchema = z.object({
 
   RESEND_API_KEY: z.string(),
   MAIL_FROM_EMAIL: z.string(),
+
+  SWAGGER_ACCESS_KEY: z.string(),
 });
 
 export type Env = z.infer<typeof envSchema>;
