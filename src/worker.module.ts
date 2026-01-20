@@ -4,6 +4,7 @@ import { envSchema } from '@/env';
 import { QueueModule } from '@/lib/queue/queue.module';
 import { EmailProcessor } from '@/lib/queue/processors/email.processor';
 import { PrismaModule } from '@/lib/prisma/prisma.module';
+import { EmailModule } from '@/lib/email/email.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { PrismaModule } from '@/lib/prisma/prisma.module';
     }),
     QueueModule,
     PrismaModule,
+    EmailModule,
   ],
   providers: [EmailProcessor],
 })

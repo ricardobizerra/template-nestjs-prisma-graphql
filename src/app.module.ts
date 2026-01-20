@@ -11,6 +11,7 @@ import { AuthModule } from './auth/auth.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
 import { QueueModule } from '@/lib/queue/queue.module';
+import { EmailModule } from '@/lib/email/email.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { QueueModule } from '@/lib/queue/queue.module';
     RedisModule,
     AuthModule,
     QueueModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from '@/user/user.service';
+import { PrismaService } from '@/lib/prisma/prisma.service';
+import { getQueueToken } from '@nestjs/bullmq';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -18,12 +20,30 @@ describe('AuthService', () => {
     verify: vi.fn().mockReturnValue({ sub: '1' }),
   };
 
+  const mockPrismaService = {
+    passwordResetToken: {
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      delete: vi.fn(),
+      deleteMany: vi.fn(),
+    },
+    user: {
+      update: vi.fn(),
+    },
+  };
+
+  const mockEmailQueue = {
+    add: vi.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: UserService, useValue: mockUserService },
         { provide: JwtService, useValue: mockJwtService },
+        { provide: PrismaService, useValue: mockPrismaService },
+        { provide: getQueueToken('email'), useValue: mockEmailQueue },
       ],
     }).compile();
 

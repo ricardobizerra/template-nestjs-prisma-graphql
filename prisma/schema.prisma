@@ -8,12 +8,13 @@ datasource db {
 }
 
 model User {
-  id            String         @id @default(uuid())
-  email         String         @unique
-  password      String?
-  name          String
-  role          Role
-  oauthAccounts OAuthAccount[]
+  id                  String               @id @default(uuid())
+  email               String               @unique
+  password            String?
+  name                String
+  role                Role
+  oauthAccounts       OAuthAccount[]
+  passwordResetTokens PasswordResetToken[]
 }
 
 model OAuthAccount {
@@ -24,6 +25,17 @@ model OAuthAccount {
   user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerId])
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
   @@index([userId])
 }
 
