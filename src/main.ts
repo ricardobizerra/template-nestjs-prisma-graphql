@@ -10,12 +10,16 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
 import helmet from '@fastify/helmet';
+import { Logger } from 'nestjs-pino';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter(),
+    { bufferLogs: true },
   );
+
+  app.useLogger(app.get(Logger));
 
   const configService = app.get<ConfigService<Env, true>>(ConfigService);
 
