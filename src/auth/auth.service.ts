@@ -136,10 +136,11 @@ export class AuthService {
 
   async refreshAccessToken(
     refreshToken: string,
-  ): Promise<{ accessToken: string }> {
+  ): Promise<{ accessToken: string; refreshToken: string }> {
     const user = await this.verifyRefreshToken(refreshToken);
     const accessToken = this.generateAccessToken(user);
-    return { accessToken };
+    const newRefreshToken = this.generateRefreshToken(user);
+    return { accessToken, refreshToken: newRefreshToken };
   }
 
   async revokeAllRefreshTokens(userId: string): Promise<void> {
@@ -192,16 +193,19 @@ export class AuthService {
     // Generate secure token
     const token = randomBytes(32).toString('hex');
 
-    // Create token with 1 hour expiration
+    // Hash token before storing (security best practice)
+    const tokenHash = await hash(token, 10);
+
+    // Create hashed token with 1 hour expiration
     await this.prismaService.passwordResetToken.create({
       data: {
-        token,
+        token: tokenHash,
         userId: user.id,
         expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
       },
     });
 
-    // Queue email job
+    // Queue email job with unhashed token
     await this.emailQueue.add('password-reset', {
       email: user.email,
       token,
@@ -209,21 +213,22 @@ export class AuthService {
   }
 
   async resetPassword(token: string, newPassword: string): Promise<void> {
-    const resetToken = await this.prismaService.passwordResetToken.findUnique({
-      where: { token },
+    // Find all non-expired tokens and compare hashes
+    const tokens = await this.prismaService.passwordResetToken.findMany({
+      where: { expiresAt: { gt: new Date() } },
       include: { user: true },
     });
 
-    if (!resetToken) {
-      throw new BadRequestException('Invalid or expired reset token');
+    let resetToken = null;
+    for (const t of tokens) {
+      if (await compare(token, t.token)) {
+        resetToken = t;
+        break;
+      }
     }
 
-    if (resetToken.expiresAt < new Date()) {
-      // Delete expired token
-      await this.prismaService.passwordResetToken.delete({
-        where: { id: resetToken.id },
-      });
-      throw new BadRequestException('Reset token has expired');
+    if (!resetToken) {
+      throw new BadRequestException('Invalid or expired reset token');
     }
 
     // Hash new password

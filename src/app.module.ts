@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { AppController } from '@/app.controller';
 import { AppService } from '@/app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -14,6 +15,7 @@ import { QueueModule } from '@/lib/queue/queue.module';
 import { EmailModule } from '@/lib/email/email.module';
 import { EmailProcessor } from '@/lib/queue/processors/email.processor';
 import { StorageModule } from '@/lib/storage/storage.module';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -21,6 +23,12 @@ import { StorageModule } from '@/lib/storage/storage.module';
       validate: (config) => envSchema.parse(config),
       isGlobal: true,
     }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 1 minute
+        limit: 100, // 100 requests per minute globally
+      },
+    ]),
     CacheModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -41,6 +49,13 @@ import { StorageModule } from '@/lib/storage/storage.module';
     StorageModule,
   ],
   controllers: [AppController],
-  providers: [AppService, EmailProcessor],
+  providers: [
+    AppService,
+    EmailProcessor,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

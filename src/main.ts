@@ -9,6 +9,7 @@ import { Env } from '@/env';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
+import helmet from '@fastify/helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -24,8 +25,20 @@ async function bootstrap() {
 
   await app.register(fastifyCookie);
 
+  // Security headers (CSP disabled in development for Swagger UI)
+  await app.register(helmet, {
+    contentSecurityPolicy: nodeEnv === 'development' ? false : undefined,
+  });
+
   await app.register(fastifyCors, {
-    origin: nodeEnv === 'development' ? true : frontendUrl,
+    origin:
+      nodeEnv === 'development'
+        ? [
+            'http://localhost:3000',
+            'http://localhost:3333',
+            'http://127.0.0.1:3000',
+          ]
+        : frontendUrl,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
     credentials: true,
   });

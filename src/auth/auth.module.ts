@@ -1,4 +1,5 @@
 import { Module, forwardRef } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtModule } from '@nestjs/jwt';
@@ -8,14 +9,19 @@ import { GoogleStrategy } from './google.strategy';
 import { PrismaModule } from '@/lib/prisma/prisma.module';
 import { QueueModule } from '@/lib/queue/queue.module';
 import { UserModule } from '@/user/user.module';
+import { Env } from '@/env';
 
 @Module({
   imports: [
     PassportModule,
-    JwtModule.register({
-      global: true,
-      secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: Number(process.env.JWT_EXPIRES_IN_SECONDS) },
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService<Env, true>) => ({
+        global: true,
+        secret: configService.get('JWT_SECRET'),
+        signOptions: { expiresIn: configService.get('JWT_EXPIRES_IN_SECONDS') },
+      }),
     }),
     PrismaModule,
     QueueModule,

@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { AuthGuard } from '@nestjs/passport';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { SignInDto } from './dto/sign-in.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -81,6 +82,7 @@ export class AuthController {
   }
 
   @Post('sign-in')
+  @Throttle({ default: { ttl: 60000, limit: 5 } }) // 5 attempts per minute
   @HttpCode(HttpStatus.OK)
   async signIn(@Body() signInDto: SignInDto, @Res() res: FastifyReply) {
     const result = await this.authService.signIn(
@@ -90,13 +92,11 @@ export class AuthController {
 
     this.setTokenCookies(res, result.accessToken, result.refreshToken);
 
-    return res.send({
-      accessToken: result.accessToken,
-      user: result.user,
-    });
+    return res.send({ user: result.user });
   }
 
   @Post('refresh')
+  @Throttle({ default: { ttl: 60000, limit: 10 } }) // 10 per minute
   @HttpCode(HttpStatus.OK)
   async refresh(@Req() req: FastifyRequest, @Res() res: FastifyReply) {
     const refreshToken = req.cookies.refreshToken;
@@ -107,20 +107,13 @@ export class AuthController {
       });
     }
 
-    const { accessToken } =
+    const { accessToken, refreshToken: newRefreshToken } =
       await this.authService.refreshAccessToken(refreshToken);
 
-    // Update access token cookie
-    const nodeEnv = this.configService.get('NODE_ENV', { infer: true });
-    res.setCookie('accessToken', accessToken, {
-      httpOnly: true,
-      secure: nodeEnv === 'production',
-      sameSite: nodeEnv === 'production' ? 'strict' : 'lax',
-      maxAge: this.configService.get('JWT_EXPIRES_IN_SECONDS', { infer: true }),
-      path: '/',
-    });
+    // Rotate both tokens
+    this.setTokenCookies(res, accessToken, newRefreshToken);
 
-    return res.send({ accessToken });
+    return res.send({ message: 'Token refreshed successfully' });
   }
 
   @Post('sign-out')
@@ -131,6 +124,7 @@ export class AuthController {
   }
 
   @Post('forgot-password')
+  @Throttle({ default: { ttl: 3600000, limit: 3 } }) // 3 per hour
   @HttpCode(HttpStatus.OK)
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
     await this.authService.requestPasswordReset(forgotPasswordDto.email);
