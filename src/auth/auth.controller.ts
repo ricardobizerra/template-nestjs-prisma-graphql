@@ -26,16 +26,55 @@ export class AuthController {
     private readonly configService: ConfigService<Env, true>,
   ) {}
 
-  private setCookieAndRedirect(res: FastifyReply, user: User) {
+  private setTokenCookies(
+    res: FastifyReply,
+    accessToken: string,
+    refreshToken: string,
+  ) {
     const nodeEnv = this.configService.get('NODE_ENV', { infer: true });
-    const accessToken = this.authService.generateToken(user);
+    const isProduction = nodeEnv === 'production';
 
+    // Access token cookie (short-lived)
     res.setCookie('accessToken', accessToken, {
       httpOnly: true,
-      secure: nodeEnv === 'production',
-      sameSite: nodeEnv === 'production' ? 'strict' : 'lax',
-      maxAge: this.configService.get('JWT_EXPIRES_IN_SECONDS'),
+      secure: isProduction,
+      sameSite: isProduction ? 'strict' : 'lax',
+      maxAge: this.configService.get('JWT_EXPIRES_IN_SECONDS', { infer: true }),
       path: '/',
+    });
+
+    // Refresh token cookie (long-lived)
+    const refreshExpiresDays = this.configService.get(
+      'REFRESH_TOKEN_EXPIRES_IN_DAYS',
+      { infer: true },
+    );
+    res.setCookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'strict' : 'lax',
+      maxAge: refreshExpiresDays * 24 * 60 * 60, // days to seconds
+      path: '/auth', // Only sent to auth endpoints
+    });
+
+    return res;
+  }
+
+  private clearTokenCookies(res: FastifyReply) {
+    const nodeEnv = this.configService.get('NODE_ENV', { infer: true });
+    const isProduction = nodeEnv === 'production';
+
+    res.clearCookie('accessToken', {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'strict' : 'lax',
+      path: '/',
+    });
+
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'strict' : 'lax',
+      path: '/auth',
     });
 
     return res;
@@ -49,22 +88,45 @@ export class AuthController {
       signInDto.password,
     );
 
-    this.setCookieAndRedirect(res, result.user as User);
+    this.setTokenCookies(res, result.accessToken, result.refreshToken);
 
-    return res.send(result);
+    return res.send({
+      accessToken: result.accessToken,
+      user: result.user,
+    });
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refresh(@Req() req: FastifyRequest, @Res() res: FastifyReply) {
+    const refreshToken = req.cookies.refreshToken;
+
+    if (!refreshToken) {
+      return res.status(HttpStatus.UNAUTHORIZED).send({
+        message: 'Refresh token not found',
+      });
+    }
+
+    const { accessToken } =
+      await this.authService.refreshAccessToken(refreshToken);
+
+    // Update access token cookie
+    const nodeEnv = this.configService.get('NODE_ENV', { infer: true });
+    res.setCookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: nodeEnv === 'production',
+      sameSite: nodeEnv === 'production' ? 'strict' : 'lax',
+      maxAge: this.configService.get('JWT_EXPIRES_IN_SECONDS', { infer: true }),
+      path: '/',
+    });
+
+    return res.send({ accessToken });
   }
 
   @Post('sign-out')
   @HttpCode(HttpStatus.OK)
   async signOut(@Res() res: FastifyReply) {
-    res.clearCookie('accessToken', {
-      httpOnly: true,
-      secure: this.configService.get('NODE_ENV') === 'production',
-      sameSite:
-        this.configService.get('NODE_ENV') === 'production' ? 'strict' : 'lax',
-      path: '/',
-    });
-
+    this.clearTokenCookies(res);
     return res.send({ message: 'Logged out successfully' });
   }
 
@@ -102,9 +164,12 @@ export class AuthController {
   ) {
     const user = req.user;
 
-    this.setCookieAndRedirect(res, user);
+    const accessToken = this.authService.generateAccessToken(user);
+    const refreshToken = this.authService.generateRefreshToken(user);
 
-    const frontendUrl = this.configService.get('FRONTEND_URL');
+    this.setTokenCookies(res, accessToken, refreshToken);
+
+    const frontendUrl = this.configService.get('FRONTEND_URL', { infer: true });
     return res.redirect(frontendUrl);
   }
 }

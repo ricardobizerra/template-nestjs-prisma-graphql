@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { UserService } from '@/user/user.service';
 import { PrismaService } from '@/lib/prisma/prisma.service';
 import { getQueueToken } from '@nestjs/bullmq';
@@ -18,6 +19,14 @@ describe('AuthService', () => {
     sign: vi.fn().mockReturnValue('mock-token'),
     signAsync: vi.fn().mockResolvedValue('mock-token'),
     verify: vi.fn().mockReturnValue({ sub: '1' }),
+  };
+
+  const mockConfigService = {
+    get: vi.fn((key: string) => {
+      if (key === 'REFRESH_TOKEN_EXPIRES_IN_DAYS') return 7;
+      if (key === 'REFRESH_TOKEN_SECRET') return 'test-refresh-secret';
+      return null;
+    }),
   };
 
   const mockPrismaService = {
@@ -42,6 +51,7 @@ describe('AuthService', () => {
         AuthService,
         { provide: UserService, useValue: mockUserService },
         { provide: JwtService, useValue: mockJwtService },
+        { provide: ConfigService, useValue: mockConfigService },
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: getQueueToken('email'), useValue: mockEmailQueue },
       ],

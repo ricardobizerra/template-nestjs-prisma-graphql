@@ -8,7 +8,8 @@ describe('AuthController', () => {
   let controller: AuthController;
   let mockAuthService: {
     signIn: ReturnType<typeof vi.fn>;
-    generateToken: ReturnType<typeof vi.fn>;
+    generateAccessToken: ReturnType<typeof vi.fn>;
+    generateRefreshToken: ReturnType<typeof vi.fn>;
   };
   let mockConfigService: { get: ReturnType<typeof vi.fn> };
   let mockResponse: Partial<FastifyReply>;
@@ -16,7 +17,8 @@ describe('AuthController', () => {
   beforeEach(async () => {
     mockAuthService = {
       signIn: vi.fn().mockResolvedValue({
-        accessToken: 'token',
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
         user: {
           id: '1',
           email: 'test@example.com',
@@ -24,13 +26,15 @@ describe('AuthController', () => {
           role: 'USER',
         },
       }),
-      generateToken: vi.fn().mockReturnValue('generated-token'),
+      generateAccessToken: vi.fn().mockReturnValue('generated-access-token'),
+      generateRefreshToken: vi.fn().mockReturnValue('generated-refresh-token'),
     };
 
     mockConfigService = {
       get: vi.fn((key: string) => {
         if (key === 'NODE_ENV') return 'development';
-        if (key === 'JWT_EXPIRES_IN_SECONDS') return 3600;
+        if (key === 'JWT_EXPIRES_IN_SECONDS') return 900;
+        if (key === 'REFRESH_TOKEN_EXPIRES_IN_DAYS') return 7;
         if (key === 'FRONTEND_URL') return 'http://localhost:3000';
         return null;
       }),
@@ -58,7 +62,7 @@ describe('AuthController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('should sign in a user and set cookie', async () => {
+  it('should sign in a user and set cookies', async () => {
     await controller.signIn(
       { username: 'test@example.com', password: 'password123' },
       mockResponse as FastifyReply,
@@ -68,25 +72,40 @@ describe('AuthController', () => {
       'test@example.com',
       'password123',
     );
-    expect(mockAuthService.generateToken).toHaveBeenCalled();
+    // Should set both access and refresh token cookies
     expect(mockResponse.setCookie).toHaveBeenCalledWith(
       'accessToken',
-      'generated-token',
+      'access-token',
       expect.objectContaining({
         httpOnly: true,
         sameSite: 'lax',
       }),
     );
+    expect(mockResponse.setCookie).toHaveBeenCalledWith(
+      'refreshToken',
+      'refresh-token',
+      expect.objectContaining({
+        httpOnly: true,
+        path: '/auth',
+      }),
+    );
     expect(mockResponse.send).toHaveBeenCalled();
   });
 
-  it('should sign out and clear cookie', async () => {
+  it('should sign out and clear cookies', async () => {
     await controller.signOut(mockResponse as FastifyReply);
 
     expect(mockResponse.clearCookie).toHaveBeenCalledWith(
       'accessToken',
       expect.objectContaining({
         httpOnly: true,
+      }),
+    );
+    expect(mockResponse.clearCookie).toHaveBeenCalledWith(
+      'refreshToken',
+      expect.objectContaining({
+        httpOnly: true,
+        path: '/auth',
       }),
     );
     expect(mockResponse.send).toHaveBeenCalledWith({

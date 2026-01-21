@@ -13,6 +13,7 @@ model User {
   password            String?
   name                String
   role                Role
+  tokenVersion        Int                  @default(0)
   oauthAccounts       OAuthAccount[]
   passwordResetTokens PasswordResetToken[]
 }

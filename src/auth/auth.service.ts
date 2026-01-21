@@ -7,6 +7,7 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { compare, genSalt, hash } from 'bcryptjs';
 import { SignIn } from './models/sign-in.model';
 import { userWithoutPassword } from '@/utils/user-without-password';
@@ -16,6 +17,13 @@ import { PrismaService } from '@/lib/prisma/prisma.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { randomBytes } from 'crypto';
+import { Env } from '@/env';
+
+interface RefreshTokenPayload {
+  sub: string;
+  tokenVersion: number;
+  type: 'refresh';
+}
 
 @Injectable()
 export class AuthService {
@@ -23,6 +31,7 @@ export class AuthService {
     @Inject(forwardRef(() => UserService))
     private readonly usersService: UserService,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService<Env, true>,
     private readonly prismaService: PrismaService,
     @InjectQueue('email') private readonly emailQueue: Queue,
   ) {}
@@ -63,7 +72,7 @@ export class AuthService {
     return userWithoutPassword(user);
   }
 
-  generateToken(user: User | UserModel): string {
+  generateAccessToken(user: User | UserModel): string {
     const payload = {
       sub: user.id,
       email: user.email,
@@ -74,14 +83,91 @@ export class AuthService {
     return this.jwtService.sign(payload);
   }
 
-  async signIn(email: string, password: string): Promise<SignIn> {
-    const user = await this.validateEmailAndPassword(email, password);
+  generateRefreshToken(user: User): string {
+    const payload: RefreshTokenPayload = {
+      sub: user.id,
+      tokenVersion: user.tokenVersion,
+      type: 'refresh',
+    };
 
-    const accessToken = this.generateToken(user);
+    const expiresInDays = this.configService.get(
+      'REFRESH_TOKEN_EXPIRES_IN_DAYS',
+      { infer: true },
+    );
+    const secret = this.configService.get('REFRESH_TOKEN_SECRET', {
+      infer: true,
+    });
+
+    return this.jwtService.sign(payload, {
+      secret,
+      expiresIn: `${expiresInDays}d`,
+    });
+  }
+
+  async verifyRefreshToken(token: string): Promise<User> {
+    const secret = this.configService.get('REFRESH_TOKEN_SECRET', {
+      infer: true,
+    });
+
+    let payload: RefreshTokenPayload;
+    try {
+      payload = this.jwtService.verify<RefreshTokenPayload>(token, { secret });
+    } catch {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    if (payload.type !== 'refresh') {
+      throw new UnauthorizedException('Invalid token type');
+    }
+
+    const user = await this.usersService.findOne(payload.sub);
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Check if token version matches (for revocation)
+    if (user.tokenVersion !== payload.tokenVersion) {
+      throw new UnauthorizedException('Token has been revoked');
+    }
+
+    return user;
+  }
+
+  async refreshAccessToken(
+    refreshToken: string,
+  ): Promise<{ accessToken: string }> {
+    const user = await this.verifyRefreshToken(refreshToken);
+    const accessToken = this.generateAccessToken(user);
+    return { accessToken };
+  }
+
+  async revokeAllRefreshTokens(userId: string): Promise<void> {
+    await this.prismaService.user.update({
+      where: { id: userId },
+      data: { tokenVersion: { increment: 1 } },
+    });
+  }
+
+  async signIn(
+    email: string,
+    password: string,
+  ): Promise<SignIn & { refreshToken: string }> {
+    const userModel = await this.validateEmailAndPassword(email, password);
+
+    // Get full user with tokenVersion
+    const user = await this.usersService.findOne(userModel.id);
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+
+    const accessToken = this.generateAccessToken(user);
+    const refreshToken = this.generateRefreshToken(user);
 
     return {
       accessToken,
-      user,
+      refreshToken,
+      user: userModel,
     };
   }
 
@@ -144,10 +230,13 @@ export class AuthService {
     const salt = await genSalt(10);
     const hashedPassword = await hash(newPassword, salt);
 
-    // Update user password
+    // Update user password and revoke all refresh tokens
     await this.prismaService.user.update({
       where: { id: resetToken.userId },
-      data: { password: hashedPassword },
+      data: {
+        password: hashedPassword,
+        tokenVersion: { increment: 1 }, // Revoke all refresh tokens
+      },
     });
 
     // Delete used token

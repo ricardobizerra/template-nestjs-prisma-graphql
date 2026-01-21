@@ -30,6 +30,8 @@ export const envSchema = z
 
     JWT_SECRET: z.string(),
     JWT_EXPIRES_IN_SECONDS: z.coerce.number(),
+    REFRESH_TOKEN_SECRET: z.string(),
+    REFRESH_TOKEN_EXPIRES_IN_DAYS: z.coerce.number().optional().default(7),
 
     GOOGLE_CLIENT_ID: z.string(),
     GOOGLE_CLIENT_SECRET: z.string(),
