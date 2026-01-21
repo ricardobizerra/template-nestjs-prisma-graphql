@@ -13,6 +13,7 @@ import { redisStore } from 'cache-manager-redis-store';
 import { QueueModule } from '@/lib/queue/queue.module';
 import { EmailModule } from '@/lib/email/email.module';
 import { EmailProcessor } from '@/lib/queue/processors/email.processor';
+import { StorageModule } from '@/lib/storage/storage.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { EmailProcessor } from '@/lib/queue/processors/email.processor';
     AuthModule,
     QueueModule,
     EmailModule,
+    StorageModule,
   ],
   controllers: [AppController],
   providers: [AppService, EmailProcessor],
