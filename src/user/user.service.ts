@@ -3,8 +3,9 @@ import { OAuthProvider, User } from '@prisma/client';
 import { PrismaService } from '@/lib/prisma/prisma.service';
 import { RedisSubscriptionService } from '@/lib/redis/redis-subscription.service';
 import { genSalt, hash } from 'bcryptjs';
-import { PaginatedFindMany } from '@/utils/paginated-find-many';
+import { KeysetPaginatedFindMany } from '@/utils/keyset-paginated-find-many';
 import { UserModel } from './models/user.model';
+import { OrderDirection } from '@/utils/args/ordenation.args';
 
 interface FindManyArgs {
   paginationArgs: {
@@ -17,7 +18,7 @@ interface FindManyArgs {
     search: string;
   };
   ordenationArgs: {
-    orderBy: string;
+    orderBy: keyof User;
     orderDirection: 'asc' | 'desc';
   };
 }
@@ -44,36 +45,22 @@ export class UserService {
   ) {}
 
   async findMany({ paginationArgs, searchArgs, ordenationArgs }: FindManyArgs) {
-    const queriedFields: (keyof UserModel)[] = ['id', 'email', 'name', 'role'];
+    const selectFields: (keyof User)[] = ['id', 'email', 'name', 'role'];
 
-    const paginatedFindMany = new PaginatedFindMany<User, UserModel>(
-      this.prismaService,
-      this.redisSubscriptionService,
-      {
-        selectObjectArgs: [queriedFields],
-        paginationArgs,
-        searchArgs,
-        searchByFields: ['email', 'name'],
-        ordenationArgs,
-        tableName: 'User',
-      },
-    );
+    const paginator = new KeysetPaginatedFindMany<User>(this.prismaService, {
+      tableName: 'User',
+      paginationArgs,
+      searchArgs,
+      searchByFields: ['email', 'name'],
+      orderBy: ordenationArgs.orderBy,
+      orderDirection:
+        ordenationArgs.orderDirection === 'asc'
+          ? OrderDirection.Asc
+          : OrderDirection.Desc,
+      selectFields,
+    });
 
-    const items = await paginatedFindMany.getItems();
-
-    if (items.length === 0) {
-      return {
-        edges: [],
-        pageInfo: paginatedFindMany.getPageInfo(),
-      };
-    }
-
-    const edges = await paginatedFindMany.buildEdges(items);
-
-    return {
-      edges,
-      pageInfo: paginatedFindMany.getPageInfo(),
-    };
+    return paginator.findMany();
   }
 
   async findOne(id: string) {

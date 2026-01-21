@@ -15,7 +15,7 @@ import { Auth } from '@/auth/auth.decorator';
 import { CurrentUser } from './user.decorator';
 import { AuthService } from '@/auth/auth.service';
 import { UserModel } from './models/user.model';
-import { Role } from '@prisma/client';
+import { Role, User } from '@prisma/client';
 
 @Controller('users')
 export class UserController {
@@ -46,7 +46,7 @@ export class UserController {
         search: search || '',
       },
       ordenationArgs: {
-        orderBy: orderBy || 'id',
+        orderBy: (orderBy || 'id') as keyof User,
         orderDirection: orderDirection || 'asc',
       },
     });
