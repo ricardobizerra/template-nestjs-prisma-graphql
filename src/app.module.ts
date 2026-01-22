@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from '@/app.controller';
 import { AppService } from '@/app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -17,6 +17,11 @@ import { EmailProcessor } from '@/lib/queue/processors/email.processor';
 import { StorageModule } from '@/lib/storage/storage.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { AppLoggerModule, LoggingInterceptor } from '@/lib/logger';
+import {
+  HttpExceptionFilter,
+  PrismaExceptionFilter,
+  PrismaValidationExceptionFilter,
+} from '@/lib/filters';
 
 @Module({
   imports: [
@@ -54,6 +59,19 @@ import { AppLoggerModule, LoggingInterceptor } from '@/lib/logger';
   providers: [
     AppService,
     EmailProcessor,
+    // Global exception filters (order matters: most specific first)
+    {
+      provide: APP_FILTER,
+      useClass: PrismaExceptionFilter,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: PrismaValidationExceptionFilter,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: HttpExceptionFilter,
+    },
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
