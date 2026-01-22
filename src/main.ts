@@ -13,7 +13,6 @@ import fastifyCors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { Logger } from 'nestjs-pino';
 import { requestIdHook } from '@/lib/middleware';
-import { BullBoardModule } from '@/lib/bull-board';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -81,14 +80,6 @@ async function bootstrap() {
   if (nodeEnv === 'development') {
     // Full Swagger UI in development
     SwaggerModule.setup('api/docs', app, document);
-
-    // Bull Board - Queue monitoring UI (development only)
-    const bullBoardModule = app.get(BullBoardModule);
-    const serverAdapter = bullBoardModule.getServerAdapter();
-    serverAdapter.setBasePath('/admin/queues');
-    await fastifyInstance.register(serverAdapter.registerPlugin(), {
-      prefix: '/admin/queues',
-    });
   } else if (swaggerAccessKey) {
     // JSON-only endpoint with access key in staging/production
     app.getHttpAdapter().get('/api/docs-json', (req, reply) => {

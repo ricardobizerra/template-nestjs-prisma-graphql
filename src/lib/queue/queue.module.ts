@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Env } from '@/env';
+import { BullBoardModule, BullMQAdapter } from '@/lib/bull-board';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { Env } from '@/env';
       inject: [ConfigService],
     }),
     BullModule.registerQueue({ name: 'email' }),
+    BullBoardModule.forFeature({ name: 'email', adapter: BullMQAdapter }),
   ],
   exports: [BullModule],
 })

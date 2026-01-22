@@ -55,7 +55,8 @@ import { BullBoardModule } from '@/lib/bull-board';
     EmailModule,
     StorageModule,
     AppLoggerModule,
-    BullBoardModule,
+    // Bull Board - Queue monitoring UI at /admin/queues
+    BullBoardModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [
