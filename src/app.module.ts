@@ -22,6 +22,7 @@ import {
   PrismaExceptionFilter,
   PrismaValidationExceptionFilter,
 } from '@/lib/filters';
+import { BullBoardModule } from '@/lib/bull-board';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import {
     EmailModule,
     StorageModule,
     AppLoggerModule,
+    BullBoardModule,
   ],
   controllers: [AppController],
   providers: [
