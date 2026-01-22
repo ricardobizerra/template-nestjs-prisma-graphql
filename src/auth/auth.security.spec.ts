@@ -219,7 +219,7 @@ describe('Auth Security', () => {
     it('should accept valid strong passwords', async () => {
       const dto = plainToInstance(ResetPasswordDto, {
         token: 'valid-token',
-        newPassword: 'ValidPass1',
+        newPassword: 'ValidPass1!', // Must include uppercase, lowercase, number, and symbol
       });
 
       const errors = await validate(dto);
