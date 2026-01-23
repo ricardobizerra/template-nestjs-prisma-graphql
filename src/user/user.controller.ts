@@ -9,6 +9,13 @@ import {
   Inject,
   forwardRef,
 } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { UserService } from '@/user/user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { Auth } from '@/auth/auth.decorator';
@@ -17,6 +24,7 @@ import { AuthService } from '@/auth/auth.service';
 import { UserModel } from './models/user.model';
 import { Role, User } from '@prisma/client';
 
+@ApiTags('Users')
 @Controller('users')
 export class UserController {
   constructor(
@@ -26,6 +34,8 @@ export class UserController {
   ) {}
 
   @Get()
+  @ApiOperation({ summary: 'Find many users with keyset pagination' })
+  @ApiResponse({ status: 200, description: 'Return paginated users' })
   async findMany(
     @Query('first') first?: string,
     @Query('after') after?: string,
@@ -54,11 +64,23 @@ export class UserController {
 
   @Auth(Role.ADMIN)
   @Get('me')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return current user profile',
+    type: UserModel,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async findOne(@CurrentUser() user: UserModel) {
     return this.userService.findOne(user.id);
   }
 
   @Post()
+  @ApiOperation({ summary: 'Create a new user' })
+  @ApiResponse({ status: 201, description: 'User created successfully' })
+  @ApiResponse({ status: 400, description: 'Bad Request - Validation failed' })
+  @ApiResponse({ status: 409, description: 'Conflict - Email already exists' })
   async create(@Body() createUserDto: CreateUserDto) {
     const emailAlreadyExists = await this.userService.findByEmail(
       createUserDto.email,

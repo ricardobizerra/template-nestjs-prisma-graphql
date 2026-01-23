@@ -9,6 +9,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
@@ -20,6 +21,7 @@ import { ConfigService } from '@nestjs/config';
 import { Env } from '@/env';
 import { User } from '@prisma/client';
 
+@ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -82,6 +84,9 @@ export class AuthController {
   }
 
   @Post('sign-in')
+  @ApiOperation({ summary: 'Sign in with email and password' })
+  @ApiResponse({ status: 200, description: 'User signed in successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
   @Throttle({ default: { ttl: 60000, limit: 5 } }) // 5 attempts per minute
   @HttpCode(HttpStatus.OK)
   async signIn(@Body() signInDto: SignInDto, @Res() res: FastifyReply) {
@@ -96,6 +101,9 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @ApiOperation({ summary: 'Refresh access token using refresh token cookie' })
+  @ApiResponse({ status: 200, description: 'Token refreshed successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid or missing refresh token' })
   @Throttle({ default: { ttl: 60000, limit: 10 } }) // 10 per minute
   @HttpCode(HttpStatus.OK)
   async refresh(@Req() req: FastifyRequest, @Res() res: FastifyReply) {
@@ -117,6 +125,8 @@ export class AuthController {
   }
 
   @Post('sign-out')
+  @ApiOperation({ summary: 'Sign out and clear cookies' })
+  @ApiResponse({ status: 200, description: 'Logged out successfully' })
   @HttpCode(HttpStatus.OK)
   async signOut(@Res() res: FastifyReply) {
     this.clearTokenCookies(res);
@@ -124,6 +134,8 @@ export class AuthController {
   }
 
   @Post('forgot-password')
+  @ApiOperation({ summary: 'Request password reset email' })
+  @ApiResponse({ status: 200, description: 'Reset email sent if user exists' })
   @Throttle({ default: { ttl: 3600000, limit: 3 } }) // 3 per hour
   @HttpCode(HttpStatus.OK)
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
@@ -134,6 +146,9 @@ export class AuthController {
   }
 
   @Post('reset-password')
+  @ApiOperation({ summary: 'Reset password using token' })
+  @ApiResponse({ status: 200, description: 'Password reset successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid or expired token' })
   @HttpCode(HttpStatus.OK)
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     await this.authService.resetPassword(
@@ -145,12 +160,15 @@ export class AuthController {
   }
 
   @Get('google')
+  @ApiOperation({ summary: 'Initiate Google OAuth2 flow' })
   @UseGuards(AuthGuard('google'))
   async googleAuth() {
     // Guard redirects to Google
   }
 
   @Get('google/callback')
+  @ApiOperation({ summary: 'Google OAuth2 callback' })
+  @ApiResponse({ status: 302, description: 'Redirects to frontend' })
   @UseGuards(AuthGuard('google'))
   async googleAuthCallback(
     @Req() req: FastifyRequest & { user: User },
