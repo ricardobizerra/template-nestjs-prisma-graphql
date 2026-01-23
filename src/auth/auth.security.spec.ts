@@ -226,4 +226,21 @@ describe('Auth Security', () => {
       expect(errors.length).toBe(0);
     });
   });
+
+  describe('CSRF Protection', () => {
+    it('should generate and return a CSRF token', async () => {
+      const mockRes = {
+        ...mockResponse,
+        generateCsrf: vi.fn().mockReturnValue('mocked-csrf-token'),
+        send: vi.fn().mockImplementation((val) => val),
+      } as unknown as FastifyReply;
+
+      await controller.getCsrfToken(mockRes);
+
+      expect(mockRes.generateCsrf).toHaveBeenCalled();
+      expect(mockRes.send).toHaveBeenCalledWith({
+        csrfToken: 'mocked-csrf-token',
+      });
+    });
+  });
 });
