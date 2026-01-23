@@ -14,8 +14,13 @@ model User {
   name                String
   role                Role
   tokenVersion        Int                  @default(0)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  deletedAt           DateTime?
   oauthAccounts       OAuthAccount[]
   passwordResetTokens PasswordResetToken[]
+
+  @@index([deletedAt])
 }
 
 model OAuthAccount {
@@ -23,10 +28,14 @@ model OAuthAccount {
   provider   OAuthProvider
   providerId String
   userId     String
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  deletedAt  DateTime?
   user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerId])
   @@index([userId])
+  @@index([deletedAt])
 }
 
 model PasswordResetToken {

@@ -1,6 +1,13 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma, PrismaClient } from '@prisma/client';
+import {
+  configureSoftDelete,
+  executeHardDelete,
+  restoreSoftDeleted,
+  findSoftDeleted,
+  SoftDeleteModel,
+} from './soft-delete.extension';
 
 type TransactionClient = Omit<
   PrismaClient,
@@ -33,6 +40,9 @@ export class PrismaService
         },
       },
     });
+
+    // Configure soft delete middleware
+    configureSoftDelete(this);
   }
 
   onModuleInit() {
@@ -48,10 +58,6 @@ export class PrismaService
 
       if (tables.length > 0) {
         console.log('Dropping tables');
-        // await this.$executeRaw`DROP TABLE IF EXISTS ${Prisma.join(
-        //   tables.map((t) => `"${t.table_name}"`),
-        //   ', ',
-        // )} CASCADE`;
       }
     }
 
@@ -63,19 +69,11 @@ export class PrismaService
    * If any operation fails, all operations are rolled back.
    *
    * @example
-   * // Interactive transaction (recommended for complex operations)
    * await prisma.executeTransaction(async (tx) => {
    *   const user = await tx.user.create({ data: { ... } });
    *   await tx.profile.create({ data: { userId: user.id, ... } });
    *   return user;
    * });
-   *
-   * @example
-   * // With custom options
-   * await prisma.executeTransaction(
-   *   async (tx) => { ... },
-   *   { timeout: 10000, isolationLevel: 'Serializable' }
-   * );
    */
   async executeTransaction<T>(
     fn: (tx: TransactionClient) => Promise<T>,
@@ -86,5 +84,38 @@ export class PrismaService
       timeout: options?.timeout ?? 10000,
       isolationLevel: options?.isolationLevel,
     });
+  }
+
+  /**
+   * Permanently delete a record (bypasses soft delete middleware).
+   *
+   * @example
+   * await prisma.hardDelete('User', { id: 'user-123' });
+   */
+  async hardDelete(
+    model: SoftDeleteModel,
+    where: { id: string },
+  ): Promise<void> {
+    return executeHardDelete(this, model, where);
+  }
+
+  /**
+   * Restore a soft-deleted record.
+   *
+   * @example
+   * await prisma.restore('User', 'user-123');
+   */
+  async restore(model: SoftDeleteModel, id: string): Promise<void> {
+    return restoreSoftDeleted(this, model, id);
+  }
+
+  /**
+   * Find all soft-deleted records for a model.
+   *
+   * @example
+   * const deletedUsers = await prisma.findDeleted<User>('User');
+   */
+  async findDeleted<T>(model: SoftDeleteModel): Promise<T[]> {
+    return findSoftDeleted<T>(this, model);
   }
 }
