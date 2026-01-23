@@ -20,15 +20,11 @@ export const REQUEST_ID_HEADER = 'x-request-id';
  */
 export async function requestIdHook(
   request: FastifyRequest,
-  _reply: FastifyReply,
+  reply: FastifyReply,
 ): Promise<void> {
-  const existingId = request.headers[REQUEST_ID_HEADER];
-
-  if (!existingId) {
-    const requestId = randomUUID();
-    // Modify headers to include request ID for downstream use
-    (request.headers as Record<string, string>)[REQUEST_ID_HEADER] = requestId;
-  }
+  // Fastify request.id is now a UUID globally (configured in main.ts)
+  // We just ensure it's sent back in the response headers for the client
+  reply.header(REQUEST_ID_HEADER, request.id);
 }
 
 /**

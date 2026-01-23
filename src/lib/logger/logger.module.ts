@@ -30,11 +30,14 @@ import { IncomingMessage, ServerResponse } from 'http';
               : undefined,
             genReqId: (req: IncomingMessage) =>
               (req.headers['x-request-id'] as string) || randomUUID(),
-            customProps: (req: IncomingMessage) => ({
-              requestId: (req as IncomingMessage & { id: string }).id,
+            customProps: (req: any) => ({
+              requestId: req.id || req.raw?.id,
+              userId: req.user?.id || req.raw?.user?.id || null,
               correlationId:
-                (req.headers['x-correlation-id'] as string) ||
-                (req as IncomingMessage & { id: string }).id,
+                req.headers?.['x-correlation-id'] ||
+                req.raw?.headers?.['x-correlation-id'] ||
+                req.id ||
+                req.raw?.id,
               service: appName,
               environment: nodeEnv,
             }),
@@ -55,14 +58,17 @@ import { IncomingMessage, ServerResponse } from 'http';
               err: Error,
             ) => `${req.method} ${req.url} failed: ${err.message}`,
             serializers: {
-              req: (req: IncomingMessage & { id?: string }) => ({
-                id: req.id,
+              req: (req: any) => ({
+                id: req.id || req.raw?.id,
                 method: req.method,
                 url: req.url,
+                userId: req.user?.id || req.raw?.user?.id || null,
                 headers: {
                   host: req.headers.host,
                   'user-agent': req.headers['user-agent'],
-                  'x-correlation-id': req.headers['x-correlation-id'],
+                  'x-correlation-id':
+                    req.headers['x-correlation-id'] ||
+                    req.raw?.headers?.['x-correlation-id'],
                 },
               }),
               res: (res: ServerResponse) => ({

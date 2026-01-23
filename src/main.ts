@@ -15,10 +15,14 @@ import helmet from '@fastify/helmet';
 import { Logger } from 'nestjs-pino';
 import { requestIdHook } from '@/lib/middleware';
 
+import { randomUUID } from 'crypto';
+
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter(),
+    new FastifyAdapter({
+      genReqId: () => randomUUID(),
+    }),
     { bufferLogs: true },
   );
 

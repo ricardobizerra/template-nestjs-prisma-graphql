@@ -21,13 +21,19 @@ export class LoggingInterceptor implements NestInterceptor {
     const res = ctx.getResponse<FastifyReply>();
     const start = Date.now();
 
+    // Assign userId to logger context for all subsequent logs in this request
+    if (req.user?.id) {
+      this.logger.assign({ userId: req.user.id });
+      // Also attach to raw request so pino-http's customProps can see it
+      (req.raw as any).user = req.user;
+    }
+
     return next.handle().pipe(
       tap({
         next: () => {
           const duration = Date.now() - start;
           this.logger.info(
             {
-              userId: req.user?.id || null,
               endpoint: req.url,
               method: req.method,
               statusCode: res.statusCode,
@@ -41,7 +47,6 @@ export class LoggingInterceptor implements NestInterceptor {
           const duration = Date.now() - start;
           this.logger.error(
             {
-              userId: req.user?.id || null,
               endpoint: req.url,
               method: req.method,
               statusCode: res.statusCode || 500,
