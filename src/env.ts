@@ -28,6 +28,7 @@ export const envSchema = z
     REDIS_DB: z.coerce.number().optional().default(0),
     REDIS_URL: z.string(),
     REDIS_TTL: z.coerce.number().optional().default(3600),
+    COOKIE_SECRET: z.string(),
 
     JWT_SECRET: z.string(),
     JWT_EXPIRES_IN_SECONDS: z.coerce.number(),

@@ -184,4 +184,11 @@ export class AuthController {
     const frontendUrl = this.configService.get('FRONTEND_URL', { infer: true });
     return res.redirect(frontendUrl);
   }
+
+  @Get('csrf')
+  @ApiOperation({ summary: 'Get CSRF token for subsequent requests' })
+  @ApiResponse({ status: 200, description: 'Return new CSRF token' })
+  async getCsrfToken(@Res() res: FastifyReply) {
+    return res.send({ csrfToken: (res as any).generateCsrf() });
+  }
 }

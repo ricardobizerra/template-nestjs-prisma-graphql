@@ -10,6 +10,7 @@ import { Env } from '@/env';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
+import fastifyCsrf from '@fastify/csrf-protection';
 import helmet from '@fastify/helmet';
 import { Logger } from 'nestjs-pino';
 import { requestIdHook } from '@/lib/middleware';
@@ -47,7 +48,36 @@ async function bootstrap() {
   // Add request ID to all requests for distributed tracing
   fastifyInstance.addHook('onRequest', requestIdHook);
 
-  await app.register(fastifyCookie);
+  const cookieSecret = configService.get('COOKIE_SECRET');
+  await app.register(fastifyCookie, {
+    secret: cookieSecret,
+  });
+
+  // CSRF Protection
+  await app.register(fastifyCsrf, {
+    cookieOpts: {
+      signed: true,
+      httpOnly: true,
+      secure: nodeEnv === 'production',
+      sameSite: nodeEnv === 'production' ? 'strict' : 'lax',
+      path: '/',
+    },
+  });
+
+  // Enforce CSRF protection for non-safe methods (POST, PUT, PATCH, DELETE)
+  fastifyInstance.addHook('onRequest', async (request, reply) => {
+    const safeMethods = ['GET', 'HEAD', 'OPTIONS'];
+    if (safeMethods.includes(request.method)) {
+      return;
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      (fastifyInstance as any).csrfProtection(request, reply, (err?: any) => {
+        if (err) return reject(err);
+        resolve();
+      });
+    });
+  });
 
   // Security headers (CSP disabled in development for Swagger UI)
   await app.register(helmet, {
