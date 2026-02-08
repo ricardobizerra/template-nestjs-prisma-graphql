@@ -23,6 +23,7 @@ import {
   PrismaValidationExceptionFilter,
 } from '@/lib/filters';
 import { BullBoardModule } from '@/lib/bull-board';
+import { IdempotencyModule } from '@/lib/idempotency';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { BullBoardModule } from '@/lib/bull-board';
     AppLoggerModule,
     // Bull Board - Queue monitoring UI at /admin/queues
     BullBoardModule.forRoot(),
+    IdempotencyModule,
   ],
   controllers: [AppController],
   providers: [
