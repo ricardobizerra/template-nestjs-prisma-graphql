@@ -49,6 +49,46 @@ async function bootstrap() {
   // Get underlying Fastify instance for hooks
   const fastifyInstance = app.getHttpAdapter().getInstance();
 
+  // Decorate Fastify request/reply to work with Passport (required for OAuth)
+  // Passport expects Express-style methods that don't exist in Fastify
+
+  // Express-style redirect method
+  fastifyInstance.decorateReply('redirect', function (url: string) {
+    this.header('Location', url);
+    this.code(302);
+    this.send();
+    return this;
+  });
+
+  // Express-style setHeader method (required by passport-oauth2)
+  fastifyInstance.decorateReply(
+    'setHeader',
+    function (name: string, value: string) {
+      this.header(name, value);
+      return this;
+    },
+  );
+
+  // Express-style end method
+  fastifyInstance.decorateReply('end', function () {
+    this.send();
+    return this;
+  });
+
+  // Passport expects these properties to exist on the request object
+  fastifyInstance.decorateRequest('user', null);
+  fastifyInstance.decorateRequest('session', null);
+
+  // passport-oauth2 needs req.connection.encrypted to determine protocol
+  fastifyInstance.decorateRequest('connection', null);
+
+  // Set connection.encrypted based on the request protocol
+  fastifyInstance.addHook('onRequest', async (request, reply) => {
+    request.connection = {
+      encrypted: request.protocol === 'https',
+    };
+  });
+
   // Add request ID to all requests for distributed tracing
   fastifyInstance.addHook('onRequest', requestIdHook);
 

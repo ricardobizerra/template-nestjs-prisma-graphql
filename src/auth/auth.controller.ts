@@ -171,10 +171,16 @@ export class AuthController {
   @ApiResponse({ status: 302, description: 'Redirects to frontend' })
   @UseGuards(AuthGuard('google'))
   async googleAuthCallback(
-    @Req() req: FastifyRequest & { user: User },
+    @Req() req: FastifyRequest,
     @Res() res: FastifyReply,
   ) {
     const user = req.user;
+
+    if (!user) {
+      return res.status(HttpStatus.UNAUTHORIZED).send({
+        message: 'Authentication failed',
+      });
+    }
 
     const accessToken = this.authService.generateAccessToken(user);
     const refreshToken = this.authService.generateRefreshToken(user);
