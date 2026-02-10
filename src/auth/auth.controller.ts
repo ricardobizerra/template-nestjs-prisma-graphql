@@ -188,7 +188,7 @@ export class AuthController {
     this.setTokenCookies(res, accessToken, refreshToken);
 
     const frontendUrl = this.configService.get('FRONTEND_URL', { infer: true });
-    return res.redirect(frontendUrl);
+    return res.redirect(`${frontendUrl}/dashboard`);
   }
 
   @Get('csrf')

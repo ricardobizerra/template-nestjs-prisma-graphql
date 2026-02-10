@@ -62,7 +62,7 @@ export class UserController {
     });
   }
 
-  @Auth(Role.ADMIN)
+  @Auth()
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user profile' })
