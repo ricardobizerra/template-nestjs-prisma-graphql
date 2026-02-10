@@ -105,9 +105,10 @@ export class IdempotencyInterceptor implements NestInterceptor {
           keyPrefix,
         );
       }),
-      catchError(async (error) => {
+      catchError((error) => {
         // Release lock on error (don't cache error responses)
-        await this.idempotencyService.releaseLock(idempotencyKey, keyPrefix);
+        // Fire-and-forget: lock will expire via TTL if release fails
+        this.idempotencyService.releaseLock(idempotencyKey, keyPrefix);
         return throwError(() => error);
       }),
     );

@@ -1,6 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
+import {
+  vi,
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  type Mocked,
+} from 'vitest';
 import { IdempotencyService, CachedResponse } from './idempotency.service';
 import {
   IDEMPOTENCY_KEY_PREFIX,
@@ -10,13 +19,13 @@ import {
 
 describe('IdempotencyService', () => {
   let service: IdempotencyService;
-  let cacheService: jest.Mocked<Cache>;
+  let cacheService: Mocked<Cache>;
 
   beforeEach(async () => {
     const mockCacheService = {
-      get: jest.fn(),
-      set: jest.fn(),
-      del: jest.fn(),
+      get: vi.fn(),
+      set: vi.fn(),
+      del: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -34,7 +43,7 @@ describe('IdempotencyService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('checkAndLock', () => {

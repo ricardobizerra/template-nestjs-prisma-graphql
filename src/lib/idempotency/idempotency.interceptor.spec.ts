@@ -1,15 +1,23 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ExecutionContext, CallHandler, ConflictException } from '@nestjs/common';
+import {
+  ExecutionContext,
+  CallHandler,
+  ConflictException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { of, throwError } from 'rxjs';
+import { of, throwError, firstValueFrom } from 'rxjs';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { IdempotencyInterceptor } from './idempotency.interceptor';
 import { IdempotencyService, CachedResponse } from './idempotency.service';
-import { IDEMPOTENCY_HEADER, IDEMPOTENCY_METADATA_KEY } from './idempotency.constants';
+import {
+  IDEMPOTENCY_HEADER,
+  IDEMPOTENCY_METADATA_KEY,
+} from './idempotency.constants';
 
 describe('IdempotencyInterceptor', () => {
   let interceptor: IdempotencyInterceptor;
-  let reflector: jest.Mocked<Reflector>;
-  let idempotencyService: jest.Mocked<IdempotencyService>;
+  let reflector: ReturnType<typeof vi.mocked<Reflector>>;
+  let idempotencyService: ReturnType<typeof vi.mocked<IdempotencyService>>;
 
   const mockRequest = {
     headers: {} as Record<string, string>,
@@ -17,8 +25,8 @@ describe('IdempotencyInterceptor', () => {
 
   const mockResponse = {
     statusCode: 200,
-    status: jest.fn().mockReturnThis(),
-    header: jest.fn().mockReturnThis(),
+    status: vi.fn().mockReturnThis(),
+    header: vi.fn().mockReturnThis(),
   };
 
   const mockExecutionContext = {
@@ -26,7 +34,7 @@ describe('IdempotencyInterceptor', () => {
       getRequest: () => mockRequest,
       getResponse: () => mockResponse,
     }),
-    getHandler: () => jest.fn(),
+    getHandler: () => vi.fn(),
   } as unknown as ExecutionContext;
 
   const mockCallHandler: CallHandler = {
@@ -35,13 +43,13 @@ describe('IdempotencyInterceptor', () => {
 
   beforeEach(async () => {
     const mockReflector = {
-      get: jest.fn(),
+      get: vi.fn(),
     };
 
     const mockIdempotencyService = {
-      checkAndLock: jest.fn(),
-      cacheResponse: jest.fn(),
-      releaseLock: jest.fn(),
+      checkAndLock: vi.fn(),
+      cacheResponse: vi.fn(),
+      releaseLock: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -59,15 +67,18 @@ describe('IdempotencyInterceptor', () => {
     // Reset mock state
     mockRequest.headers = {};
     mockResponse.statusCode = 200;
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('when endpoint has no @Idempotent decorator', () => {
     it('should proceed normally without checking idempotency', async () => {
       reflector.get.mockReturnValue(undefined);
 
-      const result$ = await interceptor.intercept(mockExecutionContext, mockCallHandler);
-      const result = await result$.toPromise();
+      const result$ = await interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
+      const result = await firstValueFrom(result$);
 
       expect(result).toEqual({ id: 1, name: 'Test' });
       expect(idempotencyService.checkAndLock).not.toHaveBeenCalled();
@@ -84,8 +95,11 @@ describe('IdempotencyInterceptor', () => {
     it('should proceed normally when no idempotency key header is provided', async () => {
       mockRequest.headers = {};
 
-      const result$ = await interceptor.intercept(mockExecutionContext, mockCallHandler);
-      const result = await result$.toPromise();
+      const result$ = await interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
+      const result = await firstValueFrom(result$);
 
       expect(result).toEqual({ id: 1, name: 'Test' });
       expect(idempotencyService.checkAndLock).not.toHaveBeenCalled();
@@ -104,8 +118,11 @@ describe('IdempotencyInterceptor', () => {
         response: cachedResponse,
       });
 
-      const result$ = await interceptor.intercept(mockExecutionContext, mockCallHandler);
-      const result = await result$.toPromise();
+      const result$ = await interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
+      const result = await firstValueFrom(result$);
 
       expect(result).toEqual(cachedResponse.body);
       expect(mockResponse.status).toHaveBeenCalledWith(201);
@@ -126,8 +143,11 @@ describe('IdempotencyInterceptor', () => {
       mockResponse.statusCode = 201;
       idempotencyService.checkAndLock.mockResolvedValue({ status: 'new' });
 
-      const result$ = await interceptor.intercept(mockExecutionContext, mockCallHandler);
-      const result = await result$.toPromise();
+      const result$ = await interceptor.intercept(
+        mockExecutionContext,
+        mockCallHandler,
+      );
+      const result = await firstValueFrom(result$);
 
       expect(result).toEqual({ id: 1, name: 'Test' });
       expect(idempotencyService.cacheResponse).toHaveBeenCalledWith(
@@ -146,9 +166,14 @@ describe('IdempotencyInterceptor', () => {
         handle: () => throwError(() => new Error('Processing failed')),
       };
 
-      const result$ = await interceptor.intercept(mockExecutionContext, errorHandler);
+      const result$ = await interceptor.intercept(
+        mockExecutionContext,
+        errorHandler,
+      );
 
-      await expect(result$.toPromise()).rejects.toThrow('Processing failed');
+      await expect(firstValueFrom(result$)).rejects.toThrow(
+        'Processing failed',
+      );
       expect(idempotencyService.releaseLock).toHaveBeenCalledWith(
         'test-key-123',
         undefined,
