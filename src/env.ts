@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const ambients = ['development', 'staging', 'production', 'test'] as const;
-const developmentTypes = ['local', 'deploy'] as const;
+const developmentTypes = ['development', 'deploy'] as const;
 const storageProviders = ['s3', 'r2'] as const;
 
 export const envSchema = z
