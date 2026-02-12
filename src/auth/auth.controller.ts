@@ -20,6 +20,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ConfigService } from '@nestjs/config';
 import { Env } from '@/env';
 import { User } from '@prisma/client';
+import { getAvailableOAuthProviders } from './auth.constants';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -191,10 +192,52 @@ export class AuthController {
     return res.redirect(`${frontendUrl}/auth/callback`);
   }
 
+  @Get('github')
+  @ApiOperation({ summary: 'Initiate GitHub OAuth2 flow' })
+  @UseGuards(AuthGuard('github'))
+  async githubAuth() {
+    // Guard redirects to GitHub
+  }
+
+  @Get('github/callback')
+  @ApiOperation({ summary: 'GitHub OAuth2 callback' })
+  @ApiResponse({ status: 302, description: 'Redirects to frontend' })
+  @UseGuards(AuthGuard('github'))
+  async githubAuthCallback(
+    @Req() req: FastifyRequest,
+    @Res() res: FastifyReply,
+  ) {
+    const user = req.user;
+
+    if (!user) {
+      return res.status(HttpStatus.UNAUTHORIZED).send({
+        message: 'Authentication failed',
+      });
+    }
+
+    const accessToken = this.authService.generateAccessToken(user);
+    const refreshToken = this.authService.generateRefreshToken(user);
+
+    this.setTokenCookies(res, accessToken, refreshToken);
+
+    const frontendUrl = this.configService.get('FRONTEND_URL', { infer: true });
+    return res.redirect(`${frontendUrl}/auth/callback`);
+  }
+
   @Get('csrf')
   @ApiOperation({ summary: 'Get CSRF token for subsequent requests' })
   @ApiResponse({ status: 200, description: 'Return new CSRF token' })
   async getCsrfToken(@Res() res: FastifyReply) {
     return res.send({ csrfToken: (res as any).generateCsrf() });
+  }
+
+  @Get('providers')
+  @ApiOperation({ summary: 'List available OAuth providers' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns list of configured OAuth providers',
+  })
+  getAvailableProviders() {
+    return { providers: getAvailableOAuthProviders() };
   }
 }

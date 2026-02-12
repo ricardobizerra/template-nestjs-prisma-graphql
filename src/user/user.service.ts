@@ -3,6 +3,7 @@ import { OAuthProvider, User } from '@prisma/client';
 import { PrismaService } from '@/lib/prisma/prisma.service';
 import { RedisSubscriptionService } from '@/lib/redis/redis-subscription.service';
 import { genSalt, hash } from 'bcryptjs';
+import { getAvailableOAuthProviders } from '@/auth/auth.constants';
 import { KeysetPaginatedFindMany } from '@/utils/keyset-paginated-find-many';
 import { UserModel } from './models/user.model';
 import { OrderDirection } from '@/utils/args/ordenation.args';
@@ -67,6 +68,27 @@ export class UserService {
     return this.prismaService.user.findUnique({
       where: { id },
     });
+  }
+
+  async getAuthMethods(userId: string) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+      select: {
+        password: true,
+        oauthAccounts: {
+          where: { deletedAt: null },
+          select: { provider: true },
+        },
+      },
+    });
+
+    if (!user) return null;
+
+    return {
+      hasPassword: !!user.password,
+      oauthProviders: user.oauthAccounts.map((a) => a.provider),
+      availableProviders: getAvailableOAuthProviders(),
+    };
   }
 
   async findByEmail(email: string) {

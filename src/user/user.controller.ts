@@ -22,6 +22,7 @@ import { Auth } from '@/auth/auth.decorator';
 import { CurrentUser } from './user.decorator';
 import { AuthService } from '@/auth/auth.service';
 import { UserModel } from './models/user.model';
+import { AuthMethodsModel } from './models/auth-methods.model';
 import { Role, User } from '@prisma/client';
 
 @ApiTags('Users')
@@ -74,6 +75,20 @@ export class UserController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async findOne(@CurrentUser() user: UserModel) {
     return this.userService.findOne(user.id);
+  }
+
+  @Auth()
+  @Get('me/auth-methods')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user authentication methods' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return connected authentication methods',
+    type: AuthMethodsModel,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getAuthMethods(@CurrentUser() user: UserModel) {
+    return this.userService.getAuthMethods(user.id);
   }
 
   @Post()
