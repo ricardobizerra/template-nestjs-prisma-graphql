@@ -18,8 +18,12 @@ describe('PrismaService', () => {
   beforeEach(async () => {
     // Mock the extension functions
     vi.spyOn(softDelete, 'configureSoftDelete').mockImplementation(() => {});
-    vi.spyOn(softDelete, 'executeHardDelete').mockResolvedValue(undefined as any);
-    vi.spyOn(softDelete, 'restoreSoftDeleted').mockResolvedValue(undefined as any);
+    vi.spyOn(softDelete, 'executeHardDelete').mockResolvedValue(
+      undefined as any,
+    );
+    vi.spyOn(softDelete, 'restoreSoftDeleted').mockResolvedValue(
+      undefined as any,
+    );
     vi.spyOn(softDelete, 'findSoftDeleted').mockResolvedValue([]);
 
     const module: TestingModule = await Test.createTestingModule({
@@ -38,22 +42,28 @@ describe('PrismaService', () => {
   });
 
   it('should connect on init', async () => {
-    const connectSpy = vi.spyOn(service, '$connect').mockResolvedValue(undefined);
+    const connectSpy = vi
+      .spyOn(service, '$connect')
+      .mockResolvedValue(undefined);
     await service.onModuleInit();
     expect(connectSpy).toHaveBeenCalled();
   });
 
   it('should disconnect on destroy', async () => {
-    const disconnectSpy = vi.spyOn(service, '$disconnect').mockResolvedValue(undefined);
+    const disconnectSpy = vi
+      .spyOn(service, '$disconnect')
+      .mockResolvedValue(undefined);
     // Mock queryRaw for truncation logic in test mode
     vi.spyOn(service, '$queryRaw').mockResolvedValue([]);
-    
+
     await service.onModuleDestroy();
     expect(disconnectSpy).toHaveBeenCalled();
   });
 
   it('should execute transaction', async () => {
-    const transactionSpy = vi.spyOn(service, '$transaction').mockResolvedValue('success' as any);
+    const transactionSpy = vi
+      .spyOn(service, '$transaction')
+      .mockResolvedValue('success' as any);
     const result = await service.executeTransaction(async () => 'success');
     expect(result).toBe('success');
     expect(transactionSpy).toHaveBeenCalled();

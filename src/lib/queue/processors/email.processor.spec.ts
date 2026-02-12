@@ -51,7 +51,10 @@ describe('EmailProcessor', () => {
 
       emailService.sendPasswordReset.mockResolvedValue(true);
       await processor.process(job);
-      expect(emailService.sendPasswordReset).toHaveBeenCalledWith('t@t.com', 'token');
+      expect(emailService.sendPasswordReset).toHaveBeenCalledWith(
+        't@t.com',
+        'token',
+      );
     });
 
     it('should handle welcome job', async () => {
@@ -76,7 +79,9 @@ describe('EmailProcessor', () => {
       } as Job;
 
       emailService.sendWelcome.mockResolvedValue(false);
-      await expect(processor.process(job)).rejects.toThrow('Failed to send welcome email');
+      await expect(processor.process(job)).rejects.toThrow(
+        'Failed to send welcome email',
+      );
     });
 
     it('should warn for unknown job names', async () => {
@@ -94,7 +99,12 @@ describe('EmailProcessor', () => {
 
   describe('Events', () => {
     it('should log on failed', () => {
-      const job = { id: '1', name: 'test', attemptsMade: 1, opts: { attempts: 3 } } as Job;
+      const job = {
+        id: '1',
+        name: 'test',
+        attemptsMade: 1,
+        opts: { attempts: 3 },
+      } as Job;
       const error = new Error('fail');
       processor.onFailed(job, error);
       expect(logger.error).toHaveBeenCalled();

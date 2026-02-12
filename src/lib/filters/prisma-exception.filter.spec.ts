@@ -155,9 +155,7 @@ describe('PrismaExceptionFilters', () => {
 
       filter.catch(exception, mockHost as any);
 
-      expect(mockReply.status).toHaveBeenCalledWith(
-        HttpStatus.BAD_REQUEST,
-      );
+      expect(mockReply.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
       expect(mockReply.send).toHaveBeenCalledWith(
         expect.objectContaining({
           message: 'Invalid data provided',

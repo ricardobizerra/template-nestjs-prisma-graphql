@@ -62,13 +62,23 @@ describe('GoogleStrategy', () => {
 
     it('should link to existing user if email matches', async () => {
       userService.findByOAuthAccount.mockResolvedValue(null);
-      userService.findByEmail.mockResolvedValue({ id: 'u2', email: 'test@gmail.com' });
+      userService.findByEmail.mockResolvedValue({
+        id: 'u2',
+        email: 'test@gmail.com',
+      });
       const done = vi.fn();
 
       await strategy.validate('access', 'refresh', mockProfile as any, done);
 
-      expect(userService.linkOAuthAccount).toHaveBeenCalledWith('u2', OAuthProvider.GOOGLE, 'g1');
-      expect(done).toHaveBeenCalledWith(null, { id: 'u2', email: 'test@gmail.com' });
+      expect(userService.linkOAuthAccount).toHaveBeenCalledWith(
+        'u2',
+        OAuthProvider.GOOGLE,
+        'g1',
+      );
+      expect(done).toHaveBeenCalledWith(null, {
+        id: 'u2',
+        email: 'test@gmail.com',
+      });
     });
 
     it('should create new user if neither OAuth nor email exists', async () => {

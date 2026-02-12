@@ -38,7 +38,10 @@ describe('JwtStrategy', () => {
   describe('validate', () => {
     it('should validate and return user', async () => {
       const payload = { sub: '1', email: 't@t.com' };
-      authService.validateUserId.mockResolvedValue({ id: '1', email: 't@t.com' });
+      authService.validateUserId.mockResolvedValue({
+        id: '1',
+        email: 't@t.com',
+      });
 
       const result = await strategy.validate(payload as any);
 

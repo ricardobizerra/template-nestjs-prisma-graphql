@@ -45,7 +45,7 @@ describe('RedisCacheService', () => {
       (service as any).keyFunction = { test: factory };
 
       const result = await service.get('test' as any);
-      
+
       expect(result).toBe('new-item');
       expect(factory).toHaveBeenCalled();
       expect(cacheManager.set).toHaveBeenCalledWith('test', 'new-item');
