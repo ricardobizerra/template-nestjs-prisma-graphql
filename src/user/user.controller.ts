@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Query,
   HttpException,
@@ -18,6 +19,7 @@ import {
 } from '@nestjs/swagger';
 import { UserService } from '@/user/user.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { Auth } from '@/auth/auth.decorator';
 import { CurrentUser } from './user.decorator';
 import { AuthService } from '@/auth/auth.service';
@@ -75,6 +77,24 @@ export class UserController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async findOne(@CurrentUser() user: UserModel) {
     return this.userService.findOne(user.id);
+  }
+
+  @Auth()
+  @Patch('me')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update current user profile' })
+  @ApiBody({ type: UpdateUserDto })
+  @ApiResponse({
+    status: 200,
+    description: 'User profile updated successfully',
+    type: UserModel,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async updateMe(
+    @CurrentUser() user: UserModel,
+    @Body() updateUserDto: UpdateUserDto,
+  ) {
+    return this.userService.update(user.id, updateUserDto);
   }
 
   @Auth()

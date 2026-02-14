@@ -153,10 +153,13 @@ export class UserService {
     return createdUser;
   }
 
-  async update(id: string, data: CreateUserInput) {
-    return this.prismaService.user.update({
+  async update(id: string, data: { name?: string }) {
+    const user = await this.prismaService.user.update({
       where: { id },
       data,
     });
+
+    const { password, ...userWithoutPassword } = user;
+    return userWithoutPassword;
   }
 }
