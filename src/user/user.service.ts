@@ -36,6 +36,7 @@ interface CreateWithOAuthInput {
   name: string;
   provider: OAuthProvider;
   providerId: string;
+  image?: string;
 }
 
 @Injectable()
@@ -127,6 +128,7 @@ export class UserService {
       data: {
         email: data.email,
         name: data.name,
+        image: data.image,
         role: 'USER',
         oauthAccounts: {
           create: {
@@ -153,7 +155,7 @@ export class UserService {
     return createdUser;
   }
 
-  async update(id: string, data: { name?: string }) {
+  async update(id: string, data: { name?: string; image?: string }) {
     const user = await this.prismaService.user.update({
       where: { id },
       data,

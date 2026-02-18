@@ -9,14 +9,22 @@ import {
   HttpStatus,
   Inject,
   forwardRef,
+  Req,
+  HttpCode,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { FastifyRequest } from 'fastify';
+import {
+  STORAGE_PROVIDER,
+  StorageProvider,
+} from '@/lib/storage/storage.interface';
 import { UserService } from '@/user/user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -34,6 +42,8 @@ export class UserController {
     private readonly userService: UserService,
     @Inject(forwardRef(() => AuthService))
     private readonly authService: AuthService,
+    @Inject(STORAGE_PROVIDER)
+    private readonly storageProvider: StorageProvider,
   ) {}
 
   @Get()
@@ -95,6 +105,56 @@ export class UserController {
     @Body() updateUserDto: UpdateUserDto,
   ) {
     return this.userService.update(user.id, updateUserDto);
+  }
+
+  @Post('avatar')
+  @Auth()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Upload user avatar' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Avatar uploaded successfully' })
+  @HttpCode(HttpStatus.OK)
+  async uploadAvatar(
+    @CurrentUser() user: UserModel,
+    @Req() req: FastifyRequest,
+  ) {
+    const file = await req.file();
+
+    if (!file) {
+      throw new HttpException('File is required', HttpStatus.BAD_REQUEST);
+    }
+
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      throw new HttpException(
+        'Invalid file type. Only JPEG, PNG and WebP are allowed',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const buffer = await file.toBuffer();
+
+    const key = `avatars/${user.id}-${Date.now()}`;
+    const { url } = await this.storageProvider.upload(
+      buffer,
+      key,
+      file.mimetype,
+    );
+
+    await this.userService.update(user.id, { image: url });
+
+    return { url };
   }
 
   @Auth()

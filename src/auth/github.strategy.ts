@@ -26,8 +26,9 @@ export class GitHubStrategy extends PassportStrategy(Strategy, 'github') {
     profile: Profile,
     done: (error: Error | null, user?: any) => void,
   ): Promise<void> {
-    const { id: providerId, emails, displayName, username } = profile;
+    const { id: providerId, emails, displayName, username, photos } = profile;
     const email = emails?.[0]?.value;
+    const image = photos?.[0]?.value;
 
     if (!email) {
       return done(new Error('GitHub account has no email'), undefined);
@@ -57,6 +58,7 @@ export class GitHubStrategy extends PassportStrategy(Strategy, 'github') {
           user = await this.userService.createWithOAuth({
             email,
             name: displayName || username || email.split('@')[0],
+            image,
             provider: OAuthProvider.GITHUB,
             providerId,
           });

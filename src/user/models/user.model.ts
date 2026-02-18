@@ -11,6 +11,12 @@ export class UserModel {
   @ApiProperty({ example: 'John Doe' })
   name: string;
 
+  @ApiProperty({
+    example: 'https://cdn.discordapp.com/embed/avatars/0.png',
+    nullable: true,
+  })
+  image?: string;
+
   @ApiProperty({ enum: Role, example: Role.USER })
   role: Role;
 }

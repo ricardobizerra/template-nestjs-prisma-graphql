@@ -26,8 +26,9 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     profile: Profile,
     done: VerifyCallback,
   ): Promise<void> {
-    const { id: providerId, emails, displayName } = profile;
+    const { id: providerId, emails, displayName, photos } = profile;
     const email = emails?.[0]?.value;
+    const image = photos?.[0]?.value;
 
     if (!email) {
       return done(new Error('Google account has no email'), undefined);
@@ -57,6 +58,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
           user = await this.userService.createWithOAuth({
             email,
             name: displayName || email.split('@')[0],
+            image,
             provider: OAuthProvider.GOOGLE,
             providerId,
           });

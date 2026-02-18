@@ -11,6 +11,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
 import fastifyCsrf from '@fastify/csrf-protection';
+import fastifyMultipart from '@fastify/multipart';
 import helmet from '@fastify/helmet';
 import { Logger } from 'nestjs-pino';
 import { requestIdHook } from '@/lib/middleware';
@@ -105,6 +106,12 @@ async function bootstrap() {
       secure: nodeEnv === 'production',
       sameSite: nodeEnv === 'production' ? 'strict' : 'lax',
       path: '/',
+    },
+  });
+
+  await app.register(fastifyMultipart, {
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB
     },
   });
 
