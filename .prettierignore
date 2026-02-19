@@ -1,0 +1,9 @@
+dist/
+node_modules/
+coverage/
+yarn.lock
+.env*
+.agent/
+.agents/
+docs/
+prisma/migrations/
