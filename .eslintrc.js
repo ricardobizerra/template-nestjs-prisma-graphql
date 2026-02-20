@@ -23,4 +23,96 @@ module.exports = {
     '@typescript-eslint/no-explicit-any': 'off',
     '@typescript-eslint/no-unused-vars': 'off',
   },
+  overrides: [
+    {
+      files: ['src/**/domain/**/*.ts'],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            patterns: [
+              {
+                group: [
+                  '@nestjs/*',
+                  '@/lib/*',
+                  '@/infrastructure/*',
+                  '@/infrastructure/**',
+                  '@prisma/client',
+                  '@/**/infrastructure/*',
+                  '@/**/application/*',
+                  '@/**/presentation/*',
+                ],
+                message:
+                  'Domain layer cannot depend on framework, infrastructure, application, or presentation.',
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      files: ['src/**/application/**/*.ts'],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            patterns: [
+              {
+                group: [
+                  '@/lib/*',
+                  '@/infrastructure/*',
+                  '@/infrastructure/**',
+                  '@prisma/client',
+                  '@/**/infrastructure/*',
+                  '@/**/presentation/*',
+                ],
+                message:
+                  'Application layer can depend on domain/ports (and Nest DI), but not infra or presentation.',
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      files: ['src/**/presentation/**/*.ts'],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            patterns: [
+              {
+                group: [
+                  '@/lib/prisma/*',
+                  '@/lib/queue/*',
+                  '@/lib/storage/*',
+                  '@/lib/redis/*',
+                  '@prisma/client',
+                ],
+                message:
+                  'Presentation must access infra only through application/use-case abstractions.',
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      files: ['src/infrastructure/**/*.ts'],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            patterns: [
+              {
+                group: ['@/**/presentation/*'],
+                message:
+                  'Infrastructure must not depend on presentation layer.',
+              },
+            ],
+          },
+        ],
+      },
+    },
+  ],
 };
