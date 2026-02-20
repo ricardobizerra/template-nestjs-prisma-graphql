@@ -3,9 +3,9 @@ import {
   encodeCursor,
   decodeCursor,
   CursorData,
-} from './keyset-paginated-find-many';
+} from '@/utils/keyset-paginated-find-many';
 import { PrismaService } from '@/lib/prisma/prisma.service';
-import { OrderDirection } from './args/ordenation.args';
+import { OrderDirection } from '@/utils/args/ordenation.args';
 
 describe('KeysetPaginatedFindMany', () => {
   let mockPrismaService: Partial<PrismaService>;

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RedisCacheService } from './redis-cache.service';
+import { RedisCacheService } from '@/lib/redis/redis-cache.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
 

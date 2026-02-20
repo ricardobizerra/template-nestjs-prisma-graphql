@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { EmailProcessor } from './email.processor';
+import { EmailProcessor } from '@/lib/queue/processors/email.processor';
 import { EmailService } from '@/lib/email/email.service';
 import { PinoLogger } from 'nestjs-pino';
 import { Job } from 'bullmq';

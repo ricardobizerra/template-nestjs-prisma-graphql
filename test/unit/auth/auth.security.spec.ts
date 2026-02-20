@@ -3,7 +3,7 @@ import { AuthController } from '@/auth/presentation/http/auth.controller';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
-import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ResetPasswordDto } from '@/auth/dto/reset-password.dto';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 import { SignInUseCase } from '@/auth/application/use-cases/sign-in.use-case';
 import { RefreshSessionUseCase } from '@/auth/application/use-cases/refresh-session.use-case';

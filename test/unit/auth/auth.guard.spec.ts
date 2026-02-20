@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AuthGuard } from './auth.guard';
+import { AuthGuard } from '@/auth/auth.guard';
 import { ExecutionContext } from '@nestjs/common';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
 

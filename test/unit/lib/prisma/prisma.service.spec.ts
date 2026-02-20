@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaService } from './prisma.service';
+import { PrismaService } from '@/lib/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
-import * as softDelete from './soft-delete.extension';
+import * as softDelete from '@/lib/prisma/soft-delete.extension';
 
 describe('PrismaService', () => {
   let service: PrismaService;

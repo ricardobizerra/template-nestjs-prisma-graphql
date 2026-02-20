@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { LoggingInterceptor } from './logging.interceptor';
+import { LoggingInterceptor } from '@/lib/logger/logging.interceptor';
 import { PinoLogger } from 'nestjs-pino';
 import { ExecutionContext, CallHandler } from '@nestjs/common';
 import { of, throwError, lastValueFrom } from 'rxjs';

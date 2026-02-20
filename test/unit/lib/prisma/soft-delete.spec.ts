@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import { configureSoftDelete } from './soft-delete.extension';
+import { configureSoftDelete } from '@/lib/prisma/soft-delete.extension';
 
 describe('SoftDelete Middleware (Unit)', () => {
   // Capture the middlewares registered by configureSoftDelete

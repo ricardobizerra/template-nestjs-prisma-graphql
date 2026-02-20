@@ -10,12 +10,12 @@ import {
   afterEach,
   type Mocked,
 } from 'vitest';
-import { IdempotencyService, CachedResponse } from './idempotency.service';
+import { IdempotencyService, CachedResponse } from '@/lib/idempotency/idempotency.service';
 import {
   IDEMPOTENCY_KEY_PREFIX,
   IDEMPOTENCY_LOCK_PREFIX,
   IDEMPOTENCY_LOCK_TIMEOUT_MS,
-} from './idempotency.constants';
+} from '@/lib/idempotency/idempotency.constants';
 
 describe('IdempotencyService', () => {
   let service: IdempotencyService;

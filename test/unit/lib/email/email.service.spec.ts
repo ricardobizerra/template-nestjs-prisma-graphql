@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { EmailService } from './email.service';
+import { EmailService } from '@/lib/email/email.service';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
 import { Resend } from 'resend';
 

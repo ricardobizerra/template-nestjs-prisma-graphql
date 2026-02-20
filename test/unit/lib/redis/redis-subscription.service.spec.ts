@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RedisSubscriptionService } from './redis-subscription.service';
+import { RedisSubscriptionService } from '@/lib/redis/redis-subscription.service';
 import { ConfigService } from '@nestjs/config';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
 

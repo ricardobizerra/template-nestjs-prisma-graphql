@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UserService } from './user.service';
+import { UserService } from '@/user/user.service';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
 import { OAuthProvider } from '@prisma/client';
 import { USER_REPOSITORY_PORT } from '@/shared/application/ports/user-repository.port';

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AuthService } from './auth.service';
+import { AuthService } from '@/auth/auth.service';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
 import { UnauthorizedException } from '@nestjs/common';
 import { USER_REPOSITORY_PORT } from '@/shared/application/ports/user-repository.port';

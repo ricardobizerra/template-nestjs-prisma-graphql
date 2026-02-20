@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { S3StorageProvider } from './s3.provider';
+import { S3StorageProvider } from '@/lib/storage/s3.provider';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
 import {
   S3Client,

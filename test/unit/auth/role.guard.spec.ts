@@ -1,6 +1,6 @@
 import { Role } from '@prisma/client';
 import { Test, TestingModule } from '@nestjs/testing';
-import { RoleGuard } from './role.guard';
+import { RoleGuard } from '@/auth/role.guard';
 import { Reflector } from '@nestjs/core';
 import { ExecutionContext } from '@nestjs/common';
 import { describe, beforeEach, it, expect, vi } from 'vitest';

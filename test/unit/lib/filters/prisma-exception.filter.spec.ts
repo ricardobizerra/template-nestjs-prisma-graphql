@@ -4,7 +4,7 @@ import { Prisma } from '@prisma/client';
 import {
   PrismaExceptionFilter,
   PrismaValidationExceptionFilter,
-} from './prisma-exception.filter';
+} from '@/lib/filters/prisma-exception.filter';
 import { PinoLogger } from 'nestjs-pino';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
 import { FastifyReply, FastifyRequest } from 'fastify';
