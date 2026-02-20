@@ -1,87 +1,98 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UserController } from './user.controller';
-import { UserService } from './user.service';
-import { AuthService } from '@/auth/auth.service';
-import { HttpException } from '@nestjs/common';
-
+import { UserController } from '@/user/presentation/http/user.controller';
 import { describe, beforeEach, it, expect, vi, afterEach } from 'vitest';
-import { create } from 'domain';
+import { ListUsersUseCase } from '@/user/application/use-cases/list-users.use-case';
+import { GetMeUseCase } from '@/user/application/use-cases/get-me.use-case';
+import { UpdateProfileUseCase } from '@/user/application/use-cases/update-profile.use-case';
+import { UploadAvatarUseCase } from '@/user/application/use-cases/upload-avatar.use-case';
+import { GetAuthMethodsUseCase } from '@/user/application/use-cases/get-auth-methods.use-case';
+import { CreateUserUseCase } from '@/user/application/use-cases/create-user.use-case';
+import { SignInUseCase } from '@/auth/application/use-cases/sign-in.use-case';
+import { AuthCookieService } from '@/shared/infrastructure/http/auth-cookie.service';
 
 describe('UserController', () => {
   let controller: UserController;
-  let userService: any;
-
-  const mockUserService = {
-    findMany: vi.fn(),
-    findOne: vi.fn(),
-    findByEmail: vi.fn(),
-    create: vi.fn(),
-  };
-
-  const mockAuthService = {
-    signIn: vi.fn(),
-  };
+  let listUsersUseCase: { execute: ReturnType<typeof vi.fn> };
+  let getMeUseCase: { execute: ReturnType<typeof vi.fn> };
+  let createUserUseCase: { execute: ReturnType<typeof vi.fn> };
+  let signInUseCase: { execute: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UserController],
       providers: [
-        { provide: UserService, useValue: mockUserService },
-        { provide: AuthService, useValue: mockAuthService },
+        { provide: ListUsersUseCase, useValue: { execute: vi.fn() } },
+        { provide: GetMeUseCase, useValue: { execute: vi.fn() } },
+        { provide: UpdateProfileUseCase, useValue: { execute: vi.fn() } },
+        { provide: UploadAvatarUseCase, useValue: { execute: vi.fn() } },
+        { provide: GetAuthMethodsUseCase, useValue: { execute: vi.fn() } },
+        { provide: CreateUserUseCase, useValue: { execute: vi.fn() } },
+        { provide: SignInUseCase, useValue: { execute: vi.fn() } },
+        {
+          provide: AuthCookieService,
+          useValue: {
+            setTokenCookies: vi.fn(),
+          },
+        },
       ],
     }).compile();
 
     controller = module.get<UserController>(UserController);
-    userService = module.get<UserService>(UserService);
+    listUsersUseCase = module.get(ListUsersUseCase);
+    getMeUseCase = module.get(GetMeUseCase);
+    createUserUseCase = module.get(CreateUserUseCase);
+    signInUseCase = module.get(SignInUseCase);
   });
 
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('findOne (me)', () => {
-    it('should return user from service', async () => {
-      const user = { id: '1', email: 't@t.com' };
-      userService.findOne.mockResolvedValue(user);
-      const result = await controller.findOne(user as any);
-      expect(result).toEqual(user);
-      expect(userService.findOne).toHaveBeenCalledWith('1');
-    });
+  it('should return current user profile', async () => {
+    getMeUseCase.execute.mockResolvedValue({ id: '1', email: 't@t.com' });
+
+    const result = await controller.findOne({ id: '1' } as any);
+
+    expect(result).toEqual({ id: '1', email: 't@t.com' });
+    expect(getMeUseCase.execute).toHaveBeenCalledWith('1');
   });
 
-  describe('findMany', () => {
-    it('should return paginated users', async () => {
-      const mockResult = { edges: [], pageInfo: {} };
-      userService.findMany.mockResolvedValue(mockResult);
+  it('should return paginated users', async () => {
+    listUsersUseCase.execute.mockResolvedValue({ edges: [], pageInfo: {} });
 
-      const result = await controller.findMany('10');
+    const result = await controller.findMany('10');
 
-      expect(result).toBe(mockResult);
-      expect(userService.findMany).toHaveBeenCalled();
-    });
+    expect(result).toEqual({ edges: [], pageInfo: {} });
   });
 
-  describe('create', () => {
-    it('should throw conflict if email exists', async () => {
-      userService.findByEmail.mockResolvedValue({ id: '1' });
-      await expect(
-        controller.create({ email: 't@t.com' } as any),
-      ).rejects.toThrow(HttpException);
+  it('should create user and sign in', async () => {
+    const reply = { send: vi.fn().mockReturnThis() };
+    createUserUseCase.execute.mockResolvedValue({
+      id: '1',
+      email: 't@t.com',
+      name: 'N',
+      role: 'USER',
+    });
+    signInUseCase.execute.mockResolvedValue({
+      accessToken: 'a',
+      refreshToken: 'r',
+      user: { id: '1', email: 't@t.com' },
     });
 
-    it('should create and sign in user', async () => {
-      userService.findByEmail.mockResolvedValue(null);
-      userService.create.mockResolvedValue({ id: '1', email: 't@t.com' });
-      mockAuthService.signIn.mockResolvedValue({ accessToken: 'tk' });
-
-      const result = await controller.create({
+    await controller.create(
+      {
         email: 't@t.com',
         password: 'p',
         name: 'N',
         role: 'USER',
-      } as any);
+      } as any,
+      reply as any,
+    );
 
-      expect(result.accessToken).toBe('tk');
+    expect(createUserUseCase.execute).toHaveBeenCalled();
+    expect(signInUseCase.execute).toHaveBeenCalledWith('t@t.com', 'p');
+    expect(reply.send).toHaveBeenCalledWith({
+      user: { id: '1', email: 't@t.com' },
     });
   });
 });

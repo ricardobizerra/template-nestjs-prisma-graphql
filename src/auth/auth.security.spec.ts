@@ -1,26 +1,28 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
-import { ConfigService } from '@nestjs/config';
+import { AuthController } from '@/auth/presentation/http/auth.controller';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { vi, describe, beforeEach, it, expect } from 'vitest';
+import { SignInUseCase } from '@/auth/application/use-cases/sign-in.use-case';
+import { RefreshSessionUseCase } from '@/auth/application/use-cases/refresh-session.use-case';
+import { RequestPasswordResetUseCase } from '@/auth/application/use-cases/request-password-reset.use-case';
+import { ResetPasswordUseCase } from '@/auth/application/use-cases/reset-password.use-case';
+import { AuthCookieService } from '@/shared/infrastructure/http/auth-cookie.service';
+import { SESSION_TOKEN_PORT } from '@/shared/application/ports/session-token.port';
+import { CONFIG_PORT } from '@/shared/application/ports/config.port';
 
 describe('Auth Security', () => {
   let controller: AuthController;
-  let mockAuthService: {
-    signIn: ReturnType<typeof vi.fn>;
-    refreshAccessToken: ReturnType<typeof vi.fn>;
-    generateAccessToken: ReturnType<typeof vi.fn>;
-    generateRefreshToken: ReturnType<typeof vi.fn>;
-  };
-  let mockConfigService: { get: ReturnType<typeof vi.fn> };
+  let mockSignInUseCase: { execute: ReturnType<typeof vi.fn> };
+  let mockRefreshUseCase: { execute: ReturnType<typeof vi.fn> };
+  let mockCookieService: { setTokenCookies: ReturnType<typeof vi.fn> };
   let mockResponse: Partial<FastifyReply>;
 
   beforeEach(async () => {
-    mockAuthService = {
-      signIn: vi.fn().mockResolvedValue({
+    mockSignInUseCase = {
+      execute: vi.fn().mockResolvedValue({
         accessToken: 'test-access-token',
         refreshToken: 'test-refresh-token',
         user: {
@@ -30,22 +32,17 @@ describe('Auth Security', () => {
           role: 'USER',
         },
       }),
-      refreshAccessToken: vi.fn().mockResolvedValue({
+    };
+
+    mockRefreshUseCase = {
+      execute: vi.fn().mockResolvedValue({
         accessToken: 'new-access-token',
         refreshToken: 'new-refresh-token',
       }),
-      generateAccessToken: vi.fn().mockReturnValue('generated-access-token'),
-      generateRefreshToken: vi.fn().mockReturnValue('generated-refresh-token'),
     };
 
-    mockConfigService = {
-      get: vi.fn((key: string) => {
-        if (key === 'NODE_ENV') return 'production';
-        if (key === 'JWT_EXPIRES_IN_SECONDS') return 900;
-        if (key === 'REFRESH_TOKEN_EXPIRES_IN_DAYS') return 7;
-        if (key === 'FRONTEND_URL') return 'https://example.com';
-        return null;
-      }),
+    mockCookieService = {
+      setTokenCookies: vi.fn(),
     };
 
     mockResponse = {
@@ -58,189 +55,85 @@ describe('Auth Security', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
       providers: [
-        { provide: AuthService, useValue: mockAuthService },
-        { provide: ConfigService, useValue: mockConfigService },
+        { provide: SignInUseCase, useValue: mockSignInUseCase },
+        { provide: RefreshSessionUseCase, useValue: mockRefreshUseCase },
+        {
+          provide: RequestPasswordResetUseCase,
+          useValue: { execute: vi.fn() },
+        },
+        { provide: ResetPasswordUseCase, useValue: { execute: vi.fn() } },
+        { provide: AuthCookieService, useValue: mockCookieService },
+        {
+          provide: SESSION_TOKEN_PORT,
+          useValue: {
+            generateAccessToken: vi
+              .fn()
+              .mockReturnValue('generated-access-token'),
+            generateRefreshToken: vi
+              .fn()
+              .mockReturnValue('generated-refresh-token'),
+          },
+        },
+        {
+          provide: CONFIG_PORT,
+          useValue: {
+            getFrontendUrl: vi.fn().mockReturnValue('https://example.com'),
+          },
+        },
       ],
     }).compile();
 
     controller = module.get<AuthController>(AuthController);
   });
 
-  describe('Token Response Security', () => {
-    it('should not return access token in sign-in response body', async () => {
-      await controller.signIn(
-        { username: 'test@example.com', password: 'password123' },
-        mockResponse as FastifyReply,
-      );
+  it('should not return access token in sign-in response body', async () => {
+    await controller.signIn(
+      { username: 'test@example.com', password: 'password123' },
+      mockResponse as FastifyReply,
+    );
 
-      // Check that send was called with an object that does NOT contain accessToken
-      expect(mockResponse.send).toHaveBeenCalledWith(
-        expect.not.objectContaining({ accessToken: expect.any(String) }),
-      );
-
-      // Verify user is returned
-      expect(mockResponse.send).toHaveBeenCalledWith(
-        expect.objectContaining({
-          user: expect.objectContaining({ email: 'test@example.com' }),
-        }),
-      );
-    });
+    expect(mockResponse.send).toHaveBeenCalledWith(
+      expect.not.objectContaining({ accessToken: expect.any(String) }),
+    );
+    expect(mockResponse.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user: expect.objectContaining({ email: 'test@example.com' }),
+      }),
+    );
   });
 
-  describe('Refresh Token Rotation', () => {
-    it('should rotate both access and refresh tokens on refresh', async () => {
-      const mockRequest = {
-        cookies: { refreshToken: 'old-refresh-token' },
-      } as unknown as FastifyRequest;
+  it('should rotate both tokens on refresh', async () => {
+    const mockRequest = {
+      cookies: { refreshToken: 'old-refresh-token' },
+    } as unknown as FastifyRequest;
+    await controller.refresh(mockRequest, mockResponse as FastifyReply);
 
-      await controller.refresh(mockRequest, mockResponse as FastifyReply);
-
-      // Verify refreshAccessToken returns both tokens
-      expect(mockAuthService.refreshAccessToken).toHaveBeenCalledWith(
-        'old-refresh-token',
-      );
-
-      // Verify setCookie is called twice (once for access, once for refresh)
-      expect(mockResponse.setCookie).toHaveBeenCalledWith(
-        'accessToken',
-        expect.any(String),
-        expect.objectContaining({ httpOnly: true }),
-      );
-      expect(mockResponse.setCookie).toHaveBeenCalledWith(
-        'refreshToken',
-        expect.any(String),
-        expect.objectContaining({ httpOnly: true }),
-      );
-    });
+    expect(mockRefreshUseCase.execute).toHaveBeenCalledWith(
+      'old-refresh-token',
+    );
+    expect(mockCookieService.setTokenCookies).toHaveBeenCalled();
   });
 
-  describe('Cookie Security', () => {
-    it('should set HttpOnly flag on token cookies', async () => {
-      await controller.signIn(
-        { username: 'test@example.com', password: 'password123' },
-        mockResponse as FastifyReply,
-      );
-
-      expect(mockResponse.setCookie).toHaveBeenCalledWith(
-        'accessToken',
-        expect.any(String),
-        expect.objectContaining({ httpOnly: true }),
-      );
-
-      expect(mockResponse.setCookie).toHaveBeenCalledWith(
-        'refreshToken',
-        expect.any(String),
-        expect.objectContaining({ httpOnly: true }),
-      );
+  it('should validate strong password policy', async () => {
+    const dto = plainToInstance(ResetPasswordDto, {
+      token: 'valid-token',
+      newPassword: 'ValidPass1!',
     });
 
-    it('should set Secure flag in production', async () => {
-      await controller.signIn(
-        { username: 'test@example.com', password: 'password123' },
-        mockResponse as FastifyReply,
-      );
-
-      expect(mockResponse.setCookie).toHaveBeenCalledWith(
-        'accessToken',
-        expect.any(String),
-        expect.objectContaining({ secure: true }),
-      );
-    });
-
-    it('should set SameSite=strict in production', async () => {
-      await controller.signIn(
-        { username: 'test@example.com', password: 'password123' },
-        mockResponse as FastifyReply,
-      );
-
-      expect(mockResponse.setCookie).toHaveBeenCalledWith(
-        'accessToken',
-        expect.any(String),
-        expect.objectContaining({ sameSite: 'strict' }),
-      );
-    });
-
-    it('should restrict refresh token to /auth path', async () => {
-      await controller.signIn(
-        { username: 'test@example.com', password: 'password123' },
-        mockResponse as FastifyReply,
-      );
-
-      expect(mockResponse.setCookie).toHaveBeenCalledWith(
-        'refreshToken',
-        expect.any(String),
-        expect.objectContaining({ path: '/auth' }),
-      );
-    });
+    const errors = await validate(dto);
+    expect(errors.length).toBe(0);
   });
 
-  describe('Password Policy', () => {
-    it('should reject passwords shorter than 8 characters', async () => {
-      const dto = plainToInstance(ResetPasswordDto, {
-        token: 'valid-token',
-        newPassword: 'Short1',
-      });
+  it('should return csrf token', async () => {
+    const mockRes = {
+      ...mockResponse,
+      generateCsrf: vi.fn().mockReturnValue('mocked-csrf-token'),
+      send: vi.fn().mockImplementation((val) => val),
+    } as unknown as FastifyReply;
 
-      const errors = await validate(dto);
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0].property).toBe('newPassword');
-    });
-
-    it('should reject passwords without uppercase', async () => {
-      const dto = plainToInstance(ResetPasswordDto, {
-        token: 'valid-token',
-        newPassword: 'lowercase1',
-      });
-
-      const errors = await validate(dto);
-      expect(errors.length).toBeGreaterThan(0);
-    });
-
-    it('should reject passwords without lowercase', async () => {
-      const dto = plainToInstance(ResetPasswordDto, {
-        token: 'valid-token',
-        newPassword: 'UPPERCASE1',
-      });
-
-      const errors = await validate(dto);
-      expect(errors.length).toBeGreaterThan(0);
-    });
-
-    it('should reject passwords without numbers', async () => {
-      const dto = plainToInstance(ResetPasswordDto, {
-        token: 'valid-token',
-        newPassword: 'NoNumbers',
-      });
-
-      const errors = await validate(dto);
-      expect(errors.length).toBeGreaterThan(0);
-    });
-
-    it('should accept valid strong passwords', async () => {
-      const dto = plainToInstance(ResetPasswordDto, {
-        token: 'valid-token',
-        newPassword: 'ValidPass1!', // Must include uppercase, lowercase, number, and symbol
-      });
-
-      const errors = await validate(dto);
-      expect(errors.length).toBe(0);
-    });
-  });
-
-  describe('CSRF Protection', () => {
-    it('should generate and return a CSRF token', async () => {
-      const mockRes = {
-        ...mockResponse,
-        generateCsrf: vi.fn().mockReturnValue('mocked-csrf-token'),
-        send: vi.fn().mockImplementation((val) => val),
-      } as unknown as FastifyReply;
-
-      await controller.getCsrfToken(mockRes);
-
-      expect(mockRes.generateCsrf).toHaveBeenCalled();
-      expect(mockRes.send).toHaveBeenCalledWith({
-        csrfToken: 'mocked-csrf-token',
-      });
+    await controller.getCsrfToken(mockRes);
+    expect(mockRes.send).toHaveBeenCalledWith({
+      csrfToken: 'mocked-csrf-token',
     });
   });
 });

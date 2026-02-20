@@ -1,22 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { JwtStrategy } from './jwt.strategy';
-import { AuthService } from './auth.service';
+import { JwtStrategy } from '@/auth/presentation/strategies/jwt.strategy';
 import { ConfigService } from '@nestjs/config';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
+import { GetCurrentUserUseCase } from '@/auth/application/use-cases/get-current-user.use-case';
 
 describe('JwtStrategy', () => {
   let strategy: JwtStrategy;
-  let authService: any;
+  let getCurrentUserUseCase: { execute: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         JwtStrategy,
         {
-          provide: AuthService,
-          useValue: {
-            validateUserId: vi.fn(),
-          },
+          provide: GetCurrentUserUseCase,
+          useValue: { execute: vi.fn() },
         },
         {
           provide: ConfigService,
@@ -28,25 +26,24 @@ describe('JwtStrategy', () => {
     }).compile();
 
     strategy = module.get<JwtStrategy>(JwtStrategy);
-    authService = module.get<AuthService>(AuthService);
+    getCurrentUserUseCase = module.get(GetCurrentUserUseCase);
   });
 
   it('should be defined', () => {
     expect(strategy).toBeDefined();
   });
 
-  describe('validate', () => {
-    it('should validate and return user', async () => {
-      const payload = { sub: '1', email: 't@t.com' };
-      authService.validateUserId.mockResolvedValue({
-        id: '1',
-        email: 't@t.com',
-      });
-
-      const result = await strategy.validate(payload as any);
-
-      expect(result.id).toBe('1');
-      expect(authService.validateUserId).toHaveBeenCalledWith('1');
+  it('should validate and return user', async () => {
+    getCurrentUserUseCase.execute.mockResolvedValue({
+      id: '1',
+      email: 't@t.com',
     });
+    const result = await strategy.validate({
+      sub: '1',
+      email: 't@t.com',
+    } as any);
+
+    expect(result.id).toBe('1');
+    expect(getCurrentUserUseCase.execute).toHaveBeenCalledWith('1');
   });
 });

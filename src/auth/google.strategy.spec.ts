@@ -1,26 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { GoogleStrategy } from './google.strategy';
-import { UserService } from '@/user/user.service';
+import { GoogleStrategy } from '@/auth/presentation/strategies/google.strategy';
 import { ConfigService } from '@nestjs/config';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
-import { OAuthProvider } from '@prisma/client';
+import { OAuthSignInUseCase } from '@/auth/application/use-cases/oauth-sign-in.use-case';
 
 describe('GoogleStrategy', () => {
   let strategy: GoogleStrategy;
-  let userService: any;
+  let oauthSignInUseCase: { execute: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         GoogleStrategy,
         {
-          provide: UserService,
-          useValue: {
-            findByOAuthAccount: vi.fn(),
-            findByEmail: vi.fn(),
-            linkOAuthAccount: vi.fn(),
-            createWithOAuth: vi.fn(),
-          },
+          provide: OAuthSignInUseCase,
+          useValue: { execute: vi.fn() },
         },
         {
           provide: ConfigService,
@@ -37,69 +31,29 @@ describe('GoogleStrategy', () => {
     }).compile();
 
     strategy = module.get<GoogleStrategy>(GoogleStrategy);
-    userService = module.get<UserService>(UserService);
+    oauthSignInUseCase = module.get(OAuthSignInUseCase);
   });
 
   it('should be defined', () => {
     expect(strategy).toBeDefined();
   });
 
-  describe('validate', () => {
-    const mockProfile = {
-      id: 'g1',
-      emails: [{ value: 'test@gmail.com' }],
-      displayName: 'Test User',
-    };
+  it('should call oauth sign-in use case and return user', async () => {
+    oauthSignInUseCase.execute.mockResolvedValue({ id: 'u1' });
+    const done = vi.fn();
 
-    it('should return user if OAuth account exists', async () => {
-      userService.findByOAuthAccount.mockResolvedValue({ id: 'u1' });
-      const done = vi.fn();
+    await strategy.validate(
+      'access',
+      'refresh',
+      {
+        id: 'g1',
+        emails: [{ value: 'test@gmail.com' }],
+        displayName: 'Test User',
+      } as any,
+      done,
+    );
 
-      await strategy.validate('access', 'refresh', mockProfile as any, done);
-
-      expect(done).toHaveBeenCalledWith(null, { id: 'u1' });
-    });
-
-    it('should link to existing user if email matches', async () => {
-      userService.findByOAuthAccount.mockResolvedValue(null);
-      userService.findByEmail.mockResolvedValue({
-        id: 'u2',
-        email: 'test@gmail.com',
-      });
-      const done = vi.fn();
-
-      await strategy.validate('access', 'refresh', mockProfile as any, done);
-
-      expect(userService.linkOAuthAccount).toHaveBeenCalledWith(
-        'u2',
-        OAuthProvider.GOOGLE,
-        'g1',
-      );
-      expect(done).toHaveBeenCalledWith(null, {
-        id: 'u2',
-        email: 'test@gmail.com',
-      });
-    });
-
-    it('should create new user if neither OAuth nor email exists', async () => {
-      userService.findByOAuthAccount.mockResolvedValue(null);
-      userService.findByEmail.mockResolvedValue(null);
-      userService.createWithOAuth.mockResolvedValue({ id: 'u3' });
-      const done = vi.fn();
-
-      await strategy.validate('access', 'refresh', mockProfile as any, done);
-
-      expect(userService.createWithOAuth).toHaveBeenCalled();
-      expect(done).toHaveBeenCalledWith(null, { id: 'u3' });
-    });
-
-    it('should error if profile has no email', async () => {
-      const profileNoEmail = { ...mockProfile, emails: [] };
-      const done = vi.fn();
-
-      await strategy.validate('access', 'refresh', profileNoEmail as any, done);
-
-      expect(done).toHaveBeenCalledWith(expect.any(Error), undefined);
-    });
+    expect(oauthSignInUseCase.execute).toHaveBeenCalled();
+    expect(done).toHaveBeenCalledWith(null, { id: 'u1' });
   });
 });
