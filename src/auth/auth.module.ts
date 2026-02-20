@@ -1,42 +1,42 @@
-import { Module, forwardRef, Provider } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
-import { JwtModule } from '@nestjs/jwt';
+import { Module, Provider } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
-import { JwtStrategy } from './jwt.strategy';
-import { GoogleStrategy } from './google.strategy';
-import { GitHubStrategy } from './github.strategy';
-import { PrismaModule } from '@/lib/prisma/prisma.module';
-import { QueueModule } from '@/lib/queue/queue.module';
-import { UserModule } from '@/user/user.module';
-import { Env } from '@/env';
+import { AuthController } from '@/auth/presentation/http/auth.controller';
+import { AuthService } from '@/auth/auth.service';
+import { JwtStrategy } from '@/auth/presentation/strategies/jwt.strategy';
+import { GoogleStrategy } from '@/auth/presentation/strategies/google.strategy';
+import { GitHubStrategy } from '@/auth/presentation/strategies/github.strategy';
+import { SignInUseCase } from '@/auth/application/use-cases/sign-in.use-case';
+import { RefreshSessionUseCase } from '@/auth/application/use-cases/refresh-session.use-case';
+import { RequestPasswordResetUseCase } from '@/auth/application/use-cases/request-password-reset.use-case';
+import { ResetPasswordUseCase } from '@/auth/application/use-cases/reset-password.use-case';
+import { OAuthSignInUseCase } from '@/auth/application/use-cases/oauth-sign-in.use-case';
+import { RevokeAllSessionsUseCase } from '@/auth/application/use-cases/revoke-all-sessions.use-case';
+import { GetCurrentUserUseCase } from '@/auth/application/use-cases/get-current-user.use-case';
+import { AuthCookieService } from '@/shared/infrastructure/http/auth-cookie.service';
+import { InfrastructureModule } from '@/infrastructure/infrastructure.module';
 
-// Conditionally register optional OAuth strategies based on env vars
 const optionalProviders: Provider[] = [];
-
 if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
   optionalProviders.push(GitHubStrategy);
 }
 
 @Module({
-  imports: [
-    PassportModule,
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService<Env, true>) => ({
-        global: true,
-        secret: configService.get('JWT_SECRET'),
-        signOptions: { expiresIn: configService.get('JWT_EXPIRES_IN_SECONDS') },
-      }),
-    }),
-    PrismaModule,
-    QueueModule,
-    forwardRef(() => UserModule),
-  ],
+  imports: [PassportModule, InfrastructureModule],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, GoogleStrategy, ...optionalProviders],
-  exports: [AuthService],
+  providers: [
+    AuthService,
+    AuthCookieService,
+    SignInUseCase,
+    RefreshSessionUseCase,
+    RequestPasswordResetUseCase,
+    ResetPasswordUseCase,
+    OAuthSignInUseCase,
+    RevokeAllSessionsUseCase,
+    GetCurrentUserUseCase,
+    JwtStrategy,
+    GoogleStrategy,
+    ...optionalProviders,
+  ],
+  exports: [AuthService, SignInUseCase, AuthCookieService],
 })
 export class AuthModule {}
