@@ -6,7 +6,7 @@ export default defineConfig({
     globals: true,
     root: './',
     setupFiles: ['./test/setup.ts'],
-    exclude: ['**/node_modules/**', '**/dist/**'],
+    include: ['test/unit/**/*.spec.ts', 'test/integration/**/*.spec.ts'],
     alias: {
       '@': '/src',
     },
@@ -17,6 +17,11 @@ export default defineConfig({
     clearMocks: true,
     mockReset: true,
     restoreMocks: true,
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      'test/integration/**/*.e2e-spec.ts',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
