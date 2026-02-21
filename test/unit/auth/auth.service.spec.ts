@@ -18,6 +18,9 @@ describe('AuthService', () => {
   let sessionTokenPort: any;
   let signInUseCase: any;
   let refreshSessionUseCase: any;
+  let requestPasswordResetUseCase: any;
+  let resetPasswordUseCase: any;
+  let revokeAllSessionsUseCase: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -61,6 +64,9 @@ describe('AuthService', () => {
     sessionTokenPort = module.get(SESSION_TOKEN_PORT);
     signInUseCase = module.get(SignInUseCase);
     refreshSessionUseCase = module.get(RefreshSessionUseCase);
+    requestPasswordResetUseCase = module.get(RequestPasswordResetUseCase);
+    resetPasswordUseCase = module.get(ResetPasswordUseCase);
+    revokeAllSessionsUseCase = module.get(RevokeAllSessionsUseCase);
   });
 
   it('should be defined', () => {
@@ -69,6 +75,20 @@ describe('AuthService', () => {
 
   it('validateEmailAndPassword should throw when user is missing', async () => {
     userRepository.findByEmail.mockResolvedValue(null);
+    await expect(
+      service.validateEmailAndPassword('t@t.com', 'p'),
+    ).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('validateEmailAndPassword should throw when password is wrong', async () => {
+    userRepository.findByEmail.mockResolvedValue({
+      id: '1',
+      email: 't@t.com',
+      name: 'N',
+      role: 'USER',
+      password: 'hashed',
+    });
+    passwordHasher.compare.mockResolvedValue(false);
     await expect(
       service.validateEmailAndPassword('t@t.com', 'p'),
     ).rejects.toThrow(UnauthorizedException);
@@ -85,6 +105,24 @@ describe('AuthService', () => {
     passwordHasher.compare.mockResolvedValue(true);
 
     const result = await service.validateEmailAndPassword('t@t.com', 'p');
+    expect(result.id).toBe('1');
+  });
+
+  it('validateUserId should throw when user is missing', async () => {
+    userRepository.findOne.mockResolvedValue(null);
+    await expect(service.validateUserId('1')).rejects.toThrow(
+      UnauthorizedException,
+    );
+  });
+
+  it('validateUserId should return user model when valid', async () => {
+    userRepository.findOne.mockResolvedValue({
+      id: '1',
+      email: 't@t.com',
+      name: 'N',
+      role: 'USER',
+    });
+    const result = await service.validateUserId('1');
     expect(result.id).toBe('1');
   });
 
@@ -117,5 +155,114 @@ describe('AuthService', () => {
       role: 'USER',
     } as any);
     expect(sessionTokenPort.generateAccessToken).toHaveBeenCalled();
+  });
+
+  it('generateRefreshToken should call session token port', () => {
+    service.generateRefreshToken({
+      id: '1',
+      email: 't',
+      name: 'n',
+      role: 'USER',
+    } as any);
+    expect(sessionTokenPort.generateRefreshToken).toHaveBeenCalled();
+  });
+
+  it('verifyRefreshToken should call session token port', async () => {
+    sessionTokenPort.verifyRefreshToken.mockReturnValue({
+      sub: '1',
+      tokenVersion: 1,
+      type: 'refresh',
+    });
+    userRepository.findOne.mockResolvedValue({
+      id: '1',
+      tokenVersion: 1,
+    });
+    await service.verifyRefreshToken('r');
+    expect(sessionTokenPort.verifyRefreshToken).toHaveBeenCalled();
+  });
+
+  it('verifyRefreshToken should throw when token is invalid', async () => {
+    sessionTokenPort.verifyRefreshToken.mockImplementation(() => {
+      throw new UnauthorizedException();
+    });
+    await expect(service.verifyRefreshToken('r')).rejects.toThrow(
+      UnauthorizedException,
+    );
+  });
+
+  it('verifyRefreshToken should throw when token type is invalid', async () => {
+    sessionTokenPort.verifyRefreshToken.mockReturnValue({
+      sub: '1',
+      tokenVersion: 1,
+      type: 'access',
+    });
+    await expect(service.verifyRefreshToken('r')).rejects.toThrow(
+      UnauthorizedException,
+    );
+  });
+
+  it('verifyRefreshToken should throw when user is not found', async () => {
+    sessionTokenPort.verifyRefreshToken.mockReturnValue({
+      sub: '1',
+      tokenVersion: 1,
+      type: 'refresh',
+    });
+    userRepository.findOne.mockResolvedValue(null);
+    await expect(service.verifyRefreshToken('r')).rejects.toThrow(
+      UnauthorizedException,
+    );
+  });
+
+  it('verifyRefreshToken should throw when token is revoked', async () => {
+    sessionTokenPort.verifyRefreshToken.mockReturnValue({
+      sub: '1',
+      tokenVersion: 1,
+      type: 'refresh',
+    });
+    userRepository.findOne.mockResolvedValue({
+      id: '1',
+      tokenVersion: 2,
+    });
+    await expect(service.verifyRefreshToken('r')).rejects.toThrow(
+      UnauthorizedException,
+    );
+  });
+
+  it('verifyRefreshToken should return user model when valid', async () => {
+    sessionTokenPort.verifyRefreshToken.mockReturnValue({
+      sub: '1',
+      tokenVersion: 1,
+      type: 'refresh',
+    });
+    userRepository.findOne.mockResolvedValue({
+      id: '1',
+      email: 't',
+      name: 'n',
+      role: 'USER',
+      tokenVersion: 1,
+    });
+    const result = await service.verifyRefreshToken('r');
+    expect(result.id).toBe('1');
+  });
+
+  it('revokeAllRefreshTokens should revoke all refresh tokens', async () => {
+    revokeAllSessionsUseCase.execute.mockResolvedValue(undefined);
+    await service.revokeAllRefreshTokens('1');
+    expect(revokeAllSessionsUseCase.execute).toHaveBeenCalledWith('1');
+  });
+
+  it('requestPasswordReset should delegate to use case', async () => {
+    requestPasswordResetUseCase.execute.mockResolvedValue(undefined);
+    await service.requestPasswordReset('t@t.com');
+    expect(requestPasswordResetUseCase.execute).toHaveBeenCalledWith('t@t.com');
+  });
+
+  it('resetPassword should delegate to use case', async () => {
+    resetPasswordUseCase.execute.mockResolvedValue(undefined);
+    await service.resetPassword('token', 'new-password');
+    expect(resetPasswordUseCase.execute).toHaveBeenCalledWith(
+      'token',
+      'new-password',
+    );
   });
 });
