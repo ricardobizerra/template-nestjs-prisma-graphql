@@ -1,60 +1,40 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
 import { UserService } from '@/user/user.service';
-import { PrismaService } from '@/lib/prisma/prisma.service';
-import { getQueueToken } from '@nestjs/bullmq';
-
+import { HashingService } from '@/lib/hashing/hashing.service';
+import { TokenService } from './token.service';
+import { PasswordResetService } from './password-reset.service';
 import { describe, beforeEach, it, expect, vi, afterEach } from 'vitest';
-import { UnauthorizedException, BadRequestException } from '@nestjs/common';
-import { hash, compare } from 'bcryptjs';
-
-vi.mock('bcryptjs', () => ({
-  hash: vi.fn(),
-  compare: vi.fn(),
-  genSalt: vi.fn().mockResolvedValue('salt'),
-}));
+import { UnauthorizedException } from '@nestjs/common';
 
 describe('AuthService', () => {
   let service: AuthService;
   let userService: any;
-  let jwtService: any;
-  let prisma: any;
-  let emailQueue: any;
+  let hashingService: any;
+  let tokenService: any;
+  let passwordResetService: any;
 
   const mockUserService = {
     findOne: vi.fn(),
     findByEmail: vi.fn(),
+    revokeRefreshTokens: vi.fn(),
   };
 
-  const mockJwtService = {
-    sign: vi.fn().mockReturnValue('mock-token'),
-    verify: vi.fn(),
+  const mockHashingService = {
+    hash: vi.fn(),
+    compare: vi.fn(),
   };
 
-  const mockConfigService = {
-    get: vi.fn((key: string) => {
-      if (key === 'REFRESH_TOKEN_EXPIRES_IN_DAYS') return 7;
-      if (key === 'REFRESH_TOKEN_SECRET') return 'test-refresh-secret';
-      return 'secret';
-    }),
+  const mockTokenService = {
+    generateAccessToken: vi.fn(),
+    generateRefreshToken: vi.fn(),
+    verifyRefreshToken: vi.fn(),
+    refreshAccessToken: vi.fn(),
   };
 
-  const mockPrismaService = {
-    passwordResetToken: {
-      findMany: vi.fn(),
-      create: vi.fn(),
-      delete: vi.fn(),
-      deleteMany: vi.fn(),
-    },
-    user: {
-      update: vi.fn(),
-    },
-  };
-
-  const mockEmailQueue = {
-    add: vi.fn(),
+  const mockPasswordResetService = {
+    requestPasswordReset: vi.fn(),
+    resetPassword: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -62,27 +42,17 @@ describe('AuthService', () => {
       providers: [
         AuthService,
         { provide: UserService, useValue: mockUserService },
-        { provide: JwtService, useValue: mockJwtService },
-        { provide: ConfigService, useValue: mockConfigService },
-        { provide: PrismaService, useValue: mockPrismaService },
-        { provide: getQueueToken('email'), useValue: mockEmailQueue },
+        { provide: HashingService, useValue: mockHashingService },
+        { provide: TokenService, useValue: mockTokenService },
+        { provide: PasswordResetService, useValue: mockPasswordResetService },
       ],
     }).compile();
 
     service = module.get<AuthService>(AuthService);
     userService = module.get<UserService>(UserService);
-    jwtService = module.get<JwtService>(JwtService);
-    prisma = module.get<PrismaService>(PrismaService);
-    emailQueue = module.get<any>(getQueueToken('email'));
-
-    // Set default mock values that might be reset
-    mockJwtService.sign.mockReturnValue('mock-token');
-    mockConfigService.get.mockImplementation((key: string): any => {
-      if (key === 'REFRESH_TOKEN_EXPIRES_IN_DAYS') return 7;
-      if (key === 'REFRESH_TOKEN_SECRET') return 'test-refresh-secret';
-      if (key === 'FRONTEND_URL') return 'http://localhost:3000';
-      return 'secret';
-    });
+    hashingService = module.get<HashingService>(HashingService);
+    tokenService = module.get<TokenService>(TokenService);
+    passwordResetService = module.get<PasswordResetService>(PasswordResetService);
   });
 
   afterEach(() => {
@@ -95,42 +65,29 @@ describe('AuthService', () => {
 
   describe('validateEmailAndPassword', () => {
     it('should return user without password on success', async () => {
-      const user = {
-        id: '1',
-        email: 't@t.com',
-        password: 'hashed',
-        role: 'USER',
-      };
+      const user = { id: '1', email: 't@t.com', password: 'hashed', role: 'USER' };
       userService.findByEmail.mockResolvedValue(user);
-      (compare as any).mockResolvedValue(true);
+      hashingService.compare.mockResolvedValue(true);
 
       const result = await service.validateEmailAndPassword('t@t.com', 'pass');
-
       expect(result).not.toHaveProperty('password');
       expect(result.id).toBe('1');
     });
 
     it('should throw UnauthorizedException if user not found', async () => {
       userService.findByEmail.mockResolvedValue(null);
-      await expect(
-        service.validateEmailAndPassword('t@t.com', 'p'),
-      ).rejects.toThrow(UnauthorizedException);
+      await expect(service.validateEmailAndPassword('t@t.com', 'p')).rejects.toThrow(UnauthorizedException);
     });
 
     it('should throw UnauthorizedException if user has no password (OAuth-only)', async () => {
       userService.findByEmail.mockResolvedValue({ id: '1', email: 't@t.com' });
-      await expect(
-        service.validateEmailAndPassword('t@t.com', 'p'),
-      ).rejects.toThrow('This account uses OAuth login');
+      await expect(service.validateEmailAndPassword('t@t.com', 'p')).rejects.toThrow('This account uses OAuth login');
     });
 
     it('should throw UnauthorizedException if password incorrect', async () => {
-      userService.findByEmail.mockResolvedValue({ password: 'h' });
-      (compare as any).mockResolvedValue(false);
-
-      await expect(
-        service.validateEmailAndPassword('t@t.com', 'p'),
-      ).rejects.toThrow(UnauthorizedException);
+      userService.findByEmail.mockResolvedValue({ id: '1', email: 't@t.com', password: 'h' });
+      hashingService.compare.mockResolvedValue(false);
+      await expect(service.validateEmailAndPassword('t@t.com', 'p')).rejects.toThrow(UnauthorizedException);
     });
   });
 
@@ -143,107 +100,57 @@ describe('AuthService', () => {
 
     it('should throw if user not found', async () => {
       userService.findOne.mockResolvedValue(null);
-      await expect(service.validateUserId('1')).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(service.validateUserId('1')).rejects.toThrow(UnauthorizedException);
     });
   });
 
-  describe('AccessToken Generation', () => {
-    it('should generate a token with correct payload', () => {
-      const user = { id: '1', email: 't@t.com', name: 'N', role: 'USER' };
-      service.generateAccessToken(user as any);
-      expect(jwtService.sign).toHaveBeenCalledWith({
-        sub: '1',
-        email: 't@t.com',
-        name: 'N',
-        role: 'USER',
-      });
-    });
-  });
-
-  describe('RefreshToken Logic', () => {
-    it('should verify and return user if token is valid', async () => {
-      const payload = { sub: '1', tokenVersion: 0, type: 'refresh' };
-      jwtService.verify.mockReturnValue(payload);
-      userService.findOne.mockResolvedValue({ id: '1', tokenVersion: 0 });
-
-      const result = await service.verifyRefreshToken('token');
-      expect(result.id).toBe('1');
+  describe('Token methods delegation', () => {
+    it('should delegate generateAccessToken', () => {
+      tokenService.generateAccessToken.mockReturnValue('token');
+      expect(service.generateAccessToken({ id: '1' } as any)).toBe('token');
+      expect(tokenService.generateAccessToken).toHaveBeenCalledWith({ id: '1' });
     });
 
-    it('should throw if token type is not refresh', async () => {
-      jwtService.verify.mockReturnValue({ sub: '1', type: 'access' });
-      await expect(service.verifyRefreshToken('token')).rejects.toThrow(
-        'Invalid token type',
-      );
+    it('should delegate generateRefreshToken', () => {
+      tokenService.generateRefreshToken.mockReturnValue('token');
+      expect(service.generateRefreshToken({ id: '1' } as any)).toBe('token');
+      expect(tokenService.generateRefreshToken).toHaveBeenCalledWith({ id: '1' });
     });
 
-    it('should throw if user not found during refresh', async () => {
-      jwtService.verify.mockReturnValue({ sub: '1', type: 'refresh' });
-      userService.findOne.mockResolvedValue(null);
-      await expect(service.verifyRefreshToken('token')).rejects.toThrow(
-        'User not found',
-      );
+    it('should delegate verifyRefreshToken', async () => {
+      tokenService.verifyRefreshToken.mockResolvedValue({ id: '1' });
+      const res = await service.verifyRefreshToken('token');
+      expect(res).toEqual({ id: '1' });
+      expect(tokenService.verifyRefreshToken).toHaveBeenCalledWith('token');
     });
 
-    it('should throw if tokenVersion mismatch (revoked)', async () => {
-      jwtService.verify.mockReturnValue({
-        sub: '1',
-        tokenVersion: 0,
-        type: 'refresh',
-      });
-      userService.findOne.mockResolvedValue({ id: '1', tokenVersion: 1 });
-
-      await expect(service.verifyRefreshToken('token')).rejects.toThrow(
-        UnauthorizedException,
-      );
-    });
-
-    it('should throw if jwt verification fails', async () => {
-      jwtService.verify.mockImplementation(() => {
-        throw new Error();
-      });
-      await expect(service.verifyRefreshToken('token')).rejects.toThrow(
-        UnauthorizedException,
-      );
-    });
-
-    it('should refresh both tokens', async () => {
-      const user = { id: '1', email: 't@t.com', tokenVersion: 0 };
-      vi.spyOn(service, 'verifyRefreshToken').mockResolvedValue(user as any);
-
-      const result = await service.refreshAccessToken('old-token');
-      expect(result).toHaveProperty('accessToken');
-      expect(result).toHaveProperty('refreshToken');
+    it('should delegate refreshAccessToken', async () => {
+      tokenService.refreshAccessToken.mockResolvedValue({ accessToken: 'a', refreshToken: 'r' });
+      const res = await service.refreshAccessToken('token');
+      expect(res).toEqual({ accessToken: 'a', refreshToken: 'r' });
+      expect(tokenService.refreshAccessToken).toHaveBeenCalledWith('token');
     });
   });
 
   describe('Revocation', () => {
-    it('should increment tokenVersion', async () => {
+    it('should delegate revokeAllRefreshTokens to userService', async () => {
       await service.revokeAllRefreshTokens('1');
-      expect(prisma.user.update).toHaveBeenCalledWith({
-        where: { id: '1' },
-        data: { tokenVersion: { increment: 1 } },
-      });
+      expect(userService.revokeRefreshTokens).toHaveBeenCalledWith('1');
     });
   });
 
   describe('SignIn', () => {
     it('should return tokens and user', async () => {
-      const user = {
-        id: '1',
-        email: 't@t.com',
-        password: 'hashed',
-        tokenVersion: 0,
-      };
+      const user = { id: '1', email: 't@t.com', password: 'hashed', tokenVersion: 0 };
       userService.findByEmail.mockResolvedValue(user);
       userService.findOne.mockResolvedValue(user);
-      (compare as any).mockResolvedValue(true);
+      hashingService.compare.mockResolvedValue(true);
+      tokenService.generateAccessToken.mockReturnValue('access');
+      tokenService.generateRefreshToken.mockReturnValue('refresh');
 
       const result = await service.signIn('t@t.com', 'p');
-      expect(result.accessToken).toBe('mock-token');
-      expect(result.refreshToken).toBe('mock-token');
+      expect(result.accessToken).toBe('access');
+      expect(result.refreshToken).toBe('refresh');
       expect(result.user.id).toBe('1');
     });
 
@@ -251,69 +158,21 @@ describe('AuthService', () => {
       const user = { id: '1', email: 't@t.com', password: 'hashed' };
       userService.findByEmail.mockResolvedValue(user);
       userService.findOne.mockResolvedValue(null);
-      (compare as any).mockResolvedValue(true);
+      hashingService.compare.mockResolvedValue(true);
 
-      await expect(service.signIn('t@t.com', 'p')).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(service.signIn('t@t.com', 'p')).rejects.toThrow(UnauthorizedException);
     });
   });
 
-  describe('Password Reset Flow', () => {
-    it('should return early if user not found (silent failure)', async () => {
-      userService.findByEmail.mockResolvedValue(null);
+  describe('Password Reset Delegation', () => {
+    it('should delegate requestPasswordReset', async () => {
       await service.requestPasswordReset('t@t.com');
-      expect(prisma.passwordResetToken.create).not.toHaveBeenCalled();
+      expect(passwordResetService.requestPasswordReset).toHaveBeenCalledWith('t@t.com');
     });
 
-    it('should return early if user has no password (silent failure)', async () => {
-      userService.findByEmail.mockResolvedValue({ id: '1', email: 't@t.com' });
-      await service.requestPasswordReset('t@t.com');
-      expect(prisma.passwordResetToken.create).not.toHaveBeenCalled();
-    });
-
-    it('should queue email if user exists', async () => {
-      userService.findByEmail.mockResolvedValue({
-        id: '1',
-        email: 't@t.com',
-        password: 'h',
-      });
-
-      await service.requestPasswordReset('t@t.com');
-
-      expect(prisma.passwordResetToken.deleteMany).toHaveBeenCalled();
-      expect(prisma.passwordResetToken.create).toHaveBeenCalled();
-      expect(emailQueue.add).toHaveBeenCalledWith(
-        'password-reset',
-        expect.any(Object),
-      );
-    });
-
-    it('should update password on reset', async () => {
-      const mockToken = { userId: '1', token: 'hashed-token', id: 't1' };
-      prisma.passwordResetToken.findMany.mockResolvedValue([mockToken]);
-      (compare as any).mockResolvedValue(true);
-      (hash as any).mockResolvedValue('new-hashed-pass');
-
-      await service.resetPassword('plain-token', 'new-pass');
-
-      expect(prisma.user.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: '1' },
-          data: expect.objectContaining({
-            password: 'new-hashed-pass',
-            tokenVersion: { increment: 1 },
-          }),
-        }),
-      );
-      expect(prisma.passwordResetToken.delete).toHaveBeenCalled();
-    });
-
-    it('should throw if token invalid', async () => {
-      prisma.passwordResetToken.findMany.mockResolvedValue([]);
-      await expect(service.resetPassword('t', 'p')).rejects.toThrow(
-        BadRequestException,
-      );
+    it('should delegate resetPassword', async () => {
+      await service.resetPassword('token', 'new-pass');
+      expect(passwordResetService.resetPassword).toHaveBeenCalledWith('token', 'new-pass');
     });
   });
 });
