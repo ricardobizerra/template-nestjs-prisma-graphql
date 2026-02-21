@@ -3,6 +3,7 @@ import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { AuthService } from '@/auth/auth.service';
 import { HttpException } from '@nestjs/common';
+import { STORAGE_PROVIDER } from '@/lib/storage/storage.interface';
 
 import { describe, beforeEach, it, expect, vi, afterEach } from 'vitest';
 import { create } from 'domain';
@@ -28,6 +29,7 @@ describe('UserController', () => {
       providers: [
         { provide: UserService, useValue: mockUserService },
         { provide: AuthService, useValue: mockAuthService },
+        { provide: STORAGE_PROVIDER, useValue: {} },
       ],
     }).compile();
 

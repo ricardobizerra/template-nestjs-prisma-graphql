@@ -134,7 +134,9 @@ describe('AuthController', () => {
       await controller.googleAuthCallback(req as any, mockReply as any);
 
       expect(mockReply.setCookie).toHaveBeenCalledTimes(2);
-      expect(mockReply.redirect).toHaveBeenCalledWith('http://localhost:3000');
+      expect(mockReply.redirect).toHaveBeenCalledWith(
+        'http://localhost:3000/auth/callback',
+      );
     });
   });
 });
