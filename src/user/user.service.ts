@@ -155,6 +155,13 @@ export class UserService {
     return createdUser;
   }
 
+  async revokeRefreshTokens(id: string) {
+    return this.prismaService.user.update({
+      where: { id },
+      data: { tokenVersion: { increment: 1 } },
+    });
+  }
+
   async update(id: string, data: { name?: string; image?: string }) {
     const user = await this.prismaService.user.update({
       where: { id },

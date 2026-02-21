@@ -24,6 +24,7 @@ import {
 } from '@/lib/filters';
 import { BullBoardModule } from '@/lib/bull-board';
 import { IdempotencyModule } from '@/lib/idempotency';
+import { HashingModule } from '@/lib/hashing/hashing.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { IdempotencyModule } from '@/lib/idempotency';
     // Bull Board - Queue monitoring UI at /admin/queues
     BullBoardModule.forRoot(),
     IdempotencyModule,
+    HashingModule,
   ],
   controllers: [AppController],
   providers: [

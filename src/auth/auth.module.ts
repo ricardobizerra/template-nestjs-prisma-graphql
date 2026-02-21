@@ -11,6 +11,9 @@ import { PrismaModule } from '@/lib/prisma/prisma.module';
 import { QueueModule } from '@/lib/queue/queue.module';
 import { UserModule } from '@/user/user.module';
 import { Env } from '@/env';
+import { TokenService } from './token.service';
+import { PasswordResetService } from './password-reset.service';
+import { HashingModule } from '@/lib/hashing/hashing.module';
 
 // Conditionally register optional OAuth strategies based on env vars
 const optionalProviders: Provider[] = [];
@@ -33,10 +36,18 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
     }),
     PrismaModule,
     QueueModule,
+    HashingModule,
     forwardRef(() => UserModule),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, GoogleStrategy, ...optionalProviders],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    GoogleStrategy,
+    TokenService,
+    PasswordResetService,
+    ...optionalProviders,
+  ],
   exports: [AuthService],
 })
 export class AuthModule {}
