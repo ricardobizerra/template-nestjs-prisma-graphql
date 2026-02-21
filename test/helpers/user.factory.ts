@@ -38,6 +38,7 @@ export async function createTestUser(
     },
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { password: _, ...userWithoutPassword } = user;
 
   return {

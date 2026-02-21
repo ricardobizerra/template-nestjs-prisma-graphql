@@ -6,7 +6,6 @@ import * as softDelete from '@/lib/prisma/soft-delete.extension';
 
 describe('PrismaService', () => {
   let service: PrismaService;
-  let configService: any;
 
   const mockConfigService = {
     get: vi.fn((key) => {
@@ -34,7 +33,6 @@ describe('PrismaService', () => {
     }).compile();
 
     service = module.get<PrismaService>(PrismaService);
-    configService = module.get<ConfigService>(ConfigService);
   });
 
   it('should be defined', () => {

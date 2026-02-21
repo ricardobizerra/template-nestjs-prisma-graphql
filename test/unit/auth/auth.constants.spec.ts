@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { OAuthProvider } from '@prisma/client';
-import { getAvailableOAuthProviders, isOAuthProviderConfigured } from '@/auth/auth.constants';
+import {
+  getAvailableOAuthProviders,
+  isOAuthProviderConfigured,
+} from '@/auth/auth.constants';
 
 describe('auth.constants', () => {
   it('returns google by default', () => {

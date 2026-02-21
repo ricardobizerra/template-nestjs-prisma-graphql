@@ -10,7 +10,10 @@ import {
   afterEach,
   type Mocked,
 } from 'vitest';
-import { IdempotencyService, CachedResponse } from '@/lib/idempotency/idempotency.service';
+import {
+  IdempotencyService,
+  CachedResponse,
+} from '@/lib/idempotency/idempotency.service';
 import {
   IDEMPOTENCY_KEY_PREFIX,
   IDEMPOTENCY_LOCK_PREFIX,

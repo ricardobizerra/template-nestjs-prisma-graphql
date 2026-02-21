@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { OAuthProvider, Role } from '@prisma/client';
-import { toDomainOAuthProvider, toDomainRole, toPrismaOAuthProvider, toPrismaRole } from '@/shared/infrastructure/mappers/user-enum.mapper';
+import {
+  toDomainOAuthProvider,
+  toDomainRole,
+  toPrismaOAuthProvider,
+  toPrismaRole,
+} from '@/shared/infrastructure/mappers/user-enum.mapper';
 import { OAuthProviderType, UserRole } from '@/shared/domain/user.types';
 
 describe('user-enum.mapper', () => {
@@ -10,7 +15,11 @@ describe('user-enum.mapper', () => {
   });
 
   it('maps oauth providers both directions', () => {
-    expect(toDomainOAuthProvider(OAuthProvider.GITHUB)).toBe(OAuthProviderType.GITHUB);
-    expect(toPrismaOAuthProvider(OAuthProviderType.GOOGLE)).toBe(OAuthProvider.GOOGLE);
+    expect(toDomainOAuthProvider(OAuthProvider.GITHUB)).toBe(
+      OAuthProviderType.GITHUB,
+    );
+    expect(toPrismaOAuthProvider(OAuthProviderType.GOOGLE)).toBe(
+      OAuthProvider.GOOGLE,
+    );
   });
 });

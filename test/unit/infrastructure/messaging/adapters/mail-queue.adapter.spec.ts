@@ -6,6 +6,9 @@ describe('BullMqMailQueueAdapter', () => {
     const queue = { add: vi.fn() } as any;
     const adapter = new BullMqMailQueueAdapter(queue);
     await adapter.enqueuePasswordReset({ email: 'a@a.com', token: 't' });
-    expect(queue.add).toHaveBeenCalledWith('password-reset', { email: 'a@a.com', token: 't' });
+    expect(queue.add).toHaveBeenCalledWith('password-reset', {
+      email: 'a@a.com',
+      token: 't',
+    });
   });
 });

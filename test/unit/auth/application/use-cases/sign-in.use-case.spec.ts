@@ -15,23 +15,33 @@ describe('SignInUseCase', () => {
     vi.clearAllMocks();
     sessionTokenPort.generateAccessToken.mockReturnValue('a');
     sessionTokenPort.generateRefreshToken.mockReturnValue('r');
-    useCase = new SignInUseCase(userRepository, passwordHasher, sessionTokenPort);
+    useCase = new SignInUseCase(
+      userRepository,
+      passwordHasher,
+      sessionTokenPort,
+    );
   });
 
   it('throws when user not found', async () => {
     userRepository.findByEmail.mockResolvedValue(null);
-    await expect(useCase.execute('a@a.com', 'x')).rejects.toThrow(UnauthorizedException);
+    await expect(useCase.execute('a@a.com', 'x')).rejects.toThrow(
+      UnauthorizedException,
+    );
   });
 
   it('throws for oauth-only account', async () => {
     userRepository.findByEmail.mockResolvedValue({ id: '1', password: null });
-    await expect(useCase.execute('a@a.com', 'x')).rejects.toThrow('OAuth login');
+    await expect(useCase.execute('a@a.com', 'x')).rejects.toThrow(
+      'OAuth login',
+    );
   });
 
   it('throws for wrong password', async () => {
     userRepository.findByEmail.mockResolvedValue({ id: '1', password: 'h' });
     passwordHasher.compare.mockResolvedValue(false);
-    await expect(useCase.execute('a@a.com', 'x')).rejects.toThrow(UnauthorizedException);
+    await expect(useCase.execute('a@a.com', 'x')).rejects.toThrow(
+      UnauthorizedException,
+    );
   });
 
   it('returns tokens and user payload', async () => {

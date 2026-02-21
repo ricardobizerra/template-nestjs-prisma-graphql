@@ -5,7 +5,11 @@ describe('RedisDomainEventPublisherAdapter', () => {
   it('publishes userAdded payload', async () => {
     const redis = { publish: vi.fn() } as any;
     const adapter = new RedisDomainEventPublisherAdapter(redis);
-    await adapter.publishUserCreated({ email: 'a@a.com', name: 'A', role: 'USER' });
+    await adapter.publishUserCreated({
+      email: 'a@a.com',
+      name: 'A',
+      role: 'USER',
+    });
     expect(redis.publish).toHaveBeenCalledWith('userAdded', {
       userAdded: { email: 'a@a.com', name: 'A', role: 'USER' },
     });

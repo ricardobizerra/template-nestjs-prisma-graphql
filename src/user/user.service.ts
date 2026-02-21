@@ -6,10 +6,7 @@ import {
   UserRepositoryPort,
 } from '@/shared/application/ports/user-repository.port';
 import { OAuthProvider } from '@prisma/client';
-import {
-  toDomainOAuthProvider,
-  toPrismaOAuthProvider,
-} from '@/shared/infrastructure/mappers/user-enum.mapper';
+import { toDomainOAuthProvider } from '@/shared/infrastructure/mappers/user-enum.mapper';
 import { CreateUserUseCase } from '@/user/application/use-cases/create-user.use-case';
 import { UserRole } from '@/shared/domain/user.types';
 

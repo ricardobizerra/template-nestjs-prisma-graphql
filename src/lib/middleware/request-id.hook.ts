@@ -1,6 +1,4 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { randomUUID } from 'crypto';
-
 /**
  * Request ID header name.
  * Standard header for distributed tracing.

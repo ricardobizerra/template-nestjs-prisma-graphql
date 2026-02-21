@@ -2,11 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { S3StorageProvider } from '@/lib/storage/s3.provider';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
-import {
-  S3Client,
-  PutObjectCommand,
-  DeleteObjectCommand,
-} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 vi.mock('@aws-sdk/s3-request-presigner', () => ({

@@ -84,7 +84,7 @@ async function bootstrap() {
   fastifyInstance.decorateRequest('connection', null);
 
   // Set connection.encrypted based on the request protocol
-  fastifyInstance.addHook('onRequest', async (request, reply) => {
+  fastifyInstance.addHook('onRequest', async (request) => {
     request.connection = {
       encrypted: request.protocol === 'https',
     };

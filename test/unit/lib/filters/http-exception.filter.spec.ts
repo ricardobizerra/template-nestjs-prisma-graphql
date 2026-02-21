@@ -1,9 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { HttpException, HttpStatus, ArgumentsHost } from '@nestjs/common';
-import { HttpExceptionFilter, ErrorResponse } from '@/lib/filters/http-exception.filter';
+import { HttpException, HttpStatus } from '@nestjs/common';
+import { HttpExceptionFilter } from '@/lib/filters/http-exception.filter';
 import { PinoLogger } from 'nestjs-pino';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
-import { FastifyReply, FastifyRequest } from 'fastify';
 
 describe('HttpExceptionFilter', () => {
   let filter: HttpExceptionFilter;

@@ -18,16 +18,50 @@ describe('UserPrismaRepositoryAdapter', () => {
 
   it('supports basic read/write mappings', async () => {
     const adapter = new UserPrismaRepositoryAdapter(prismaService);
-    prismaService.user.findUnique.mockResolvedValue({ id: 'u1', email: 'a@a.com', name: 'A', image: null, role: 'USER', password: 'h', tokenVersion: 1 });
+    prismaService.user.findUnique.mockResolvedValue({
+      id: 'u1',
+      email: 'a@a.com',
+      name: 'A',
+      image: null,
+      role: 'USER',
+      password: 'h',
+      tokenVersion: 1,
+    });
     const byId = await adapter.findOne('u1');
     expect(byId?.role).toBe(UserRole.USER);
 
-    prismaService.user.create.mockResolvedValue({ id: 'u1', email: 'a@a.com', name: 'A', image: null, role: 'USER', password: 'h', tokenVersion: 1 });
-    const created = await adapter.create({ email: 'a@a.com', password: 'h', name: 'A', role: UserRole.USER });
+    prismaService.user.create.mockResolvedValue({
+      id: 'u1',
+      email: 'a@a.com',
+      name: 'A',
+      image: null,
+      role: 'USER',
+      password: 'h',
+      tokenVersion: 1,
+    });
+    const created = await adapter.create({
+      email: 'a@a.com',
+      password: 'h',
+      name: 'A',
+      role: UserRole.USER,
+    });
     expect(created.email).toBe('a@a.com');
 
-    prismaService.oAuthAccount.findUnique.mockResolvedValue({ user: { id: 'u2', email: 'b@b.com', name: 'B', image: null, role: 'USER', password: null, tokenVersion: 0 } });
-    const oauthUser = await adapter.findByOAuthAccount(OAuthProviderType.GOOGLE, 'pid');
+    prismaService.oAuthAccount.findUnique.mockResolvedValue({
+      user: {
+        id: 'u2',
+        email: 'b@b.com',
+        name: 'B',
+        image: null,
+        role: 'USER',
+        password: null,
+        tokenVersion: 0,
+      },
+    });
+    const oauthUser = await adapter.findByOAuthAccount(
+      OAuthProviderType.GOOGLE,
+      'pid',
+    );
     expect(oauthUser?.id).toBe('u2');
 
     await adapter.linkOAuthAccount('u1', OAuthProviderType.GITHUB, 'pid2');

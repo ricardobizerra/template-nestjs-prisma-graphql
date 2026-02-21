@@ -7,6 +7,10 @@ describe('LinkOAuthAccountUseCase', () => {
     const userRepository = { linkOAuthAccount: vi.fn() } as any;
     const useCase = new LinkOAuthAccountUseCase(userRepository);
     await useCase.execute('u1', OAuthProviderType.GITHUB, 'pid');
-    expect(userRepository.linkOAuthAccount).toHaveBeenCalledWith('u1', OAuthProviderType.GITHUB, 'pid');
+    expect(userRepository.linkOAuthAccount).toHaveBeenCalledWith(
+      'u1',
+      OAuthProviderType.GITHUB,
+      'pid',
+    );
   });
 });

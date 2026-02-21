@@ -12,7 +12,6 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import {
   IDEMPOTENCY_HEADER,
   IDEMPOTENCY_METADATA_KEY,
-  IdempotencyTTL,
 } from './idempotency.constants';
 import { IdempotencyService, CachedResponse } from './idempotency.service';
 

@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { REQUEST_ID_HEADER, requestIdHook } from '@/lib/middleware/request-id.hook';
+import {
+  REQUEST_ID_HEADER,
+  requestIdHook,
+} from '@/lib/middleware/request-id.hook';
 
 describe('requestIdHook', () => {
   it('adds request id header to response', async () => {

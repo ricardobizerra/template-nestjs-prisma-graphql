@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { HttpStatus, ArgumentsHost } from '@nestjs/common';
+import { HttpStatus } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
   PrismaExceptionFilter,
@@ -7,7 +7,6 @@ import {
 } from '@/lib/filters/prisma-exception.filter';
 import { PinoLogger } from 'nestjs-pino';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
-import { FastifyReply, FastifyRequest } from 'fastify';
 
 describe('PrismaExceptionFilters', () => {
   const createMockArgumentsHost = (url = '/test-url', requestId?: string) => {

@@ -10,9 +10,23 @@ describe('GetCurrentUserUseCase', () => {
   });
 
   it('returns mapped user', async () => {
-    const userRepository = { findOne: vi.fn().mockResolvedValue({ id: 'u1', email: 'a@a.com', name: 'A', image: null, role: 'USER' }) } as any;
+    const userRepository = {
+      findOne: vi.fn().mockResolvedValue({
+        id: 'u1',
+        email: 'a@a.com',
+        name: 'A',
+        image: null,
+        role: 'USER',
+      }),
+    } as any;
     const useCase = new GetCurrentUserUseCase(userRepository);
     const user = await useCase.execute('u1');
-    expect(user).toEqual({ id: 'u1', email: 'a@a.com', name: 'A', image: null, role: 'USER' });
+    expect(user).toEqual({
+      id: 'u1',
+      email: 'a@a.com',
+      name: 'A',
+      image: null,
+      role: 'USER',
+    });
   });
 });

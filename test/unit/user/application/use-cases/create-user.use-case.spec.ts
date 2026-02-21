@@ -11,20 +11,34 @@ describe('CreateUserUseCase', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    useCase = new CreateUserUseCase(userRepository, passwordHasher, eventPublisher);
+    useCase = new CreateUserUseCase(
+      userRepository,
+      passwordHasher,
+      eventPublisher,
+    );
   });
 
   it('throws conflict if email exists', async () => {
     userRepository.findByEmail.mockResolvedValue({ id: '1' });
     await expect(
-      useCase.execute({ email: 'a@a.com', password: 'p', name: 'A', role: UserRole.USER }),
+      useCase.execute({
+        email: 'a@a.com',
+        password: 'p',
+        name: 'A',
+        role: UserRole.USER,
+      }),
     ).rejects.toThrow(ConflictException);
   });
 
   it('creates user and publishes event', async () => {
     userRepository.findByEmail.mockResolvedValue(null);
     userRepository.create.mockResolvedValue({ id: '1' });
-    await useCase.execute({ email: 'a@a.com', password: 'p', name: 'A', role: UserRole.USER });
+    await useCase.execute({
+      email: 'a@a.com',
+      password: 'p',
+      name: 'A',
+      role: UserRole.USER,
+    });
     expect(passwordHasher.hash).toHaveBeenCalledWith('p');
     expect(eventPublisher.publishUserCreated).toHaveBeenCalled();
   });

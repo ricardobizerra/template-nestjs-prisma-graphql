@@ -11,10 +11,7 @@ import {
   SESSION_TOKEN_PORT,
   SessionTokenPort,
 } from '@/shared/application/ports/session-token.port';
-import {
-  CONFIG_PORT,
-  ConfigPort,
-} from '@/shared/application/ports/config.port';
+import { CONFIG_PORT } from '@/shared/application/ports/config.port';
 
 describe('AuthController', () => {
   let controller: AuthController;

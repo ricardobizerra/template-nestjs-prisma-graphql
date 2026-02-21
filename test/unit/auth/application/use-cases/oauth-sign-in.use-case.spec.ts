@@ -33,7 +33,11 @@ describe('OAuthSignInUseCase', () => {
     userRepository.findByOAuthAccount.mockResolvedValue(null);
     userRepository.findByEmail.mockResolvedValue({ id: 'u2' });
     const user = await useCase.execute(input);
-    expect(userRepository.linkOAuthAccount).toHaveBeenCalledWith('u2', input.provider, input.providerId);
+    expect(userRepository.linkOAuthAccount).toHaveBeenCalledWith(
+      'u2',
+      input.provider,
+      input.providerId,
+    );
     expect(user.id).toBe('u2');
   });
 

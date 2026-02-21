@@ -13,9 +13,15 @@ describe('UploadAvatarUseCase', () => {
 
   it('uploads and updates profile image', async () => {
     storagePort.upload.mockResolvedValue({ url: 'https://x/avatar.png' });
-    const result = await useCase.execute({ userId: 'u1', buffer: Buffer.from('a'), mimeType: 'image/png' });
+    const result = await useCase.execute({
+      userId: 'u1',
+      buffer: Buffer.from('a'),
+      mimeType: 'image/png',
+    });
     expect(storagePort.upload).toHaveBeenCalled();
-    expect(updateProfileUseCase.execute).toHaveBeenCalledWith('u1', { image: 'https://x/avatar.png' });
+    expect(updateProfileUseCase.execute).toHaveBeenCalledWith('u1', {
+      image: 'https://x/avatar.png',
+    });
     expect(result.url).toBe('https://x/avatar.png');
   });
 });
