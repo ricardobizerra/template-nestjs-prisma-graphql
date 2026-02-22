@@ -4,8 +4,8 @@ import { ConfigService } from '@nestjs/config';
 import { User } from '@prisma/client';
 import { UserModel } from '@/user/models/user.model';
 import { Env } from '@/env';
-import * as crypto from 'crypto';
 import { UserService } from '@/user/user.service';
+import { generateUUID } from '@/utils/uuid';
 
 import { RefreshTokenPayload } from './interfaces/jwt.interface';
 
@@ -22,7 +22,7 @@ export class TokenService {
       sub: user.id,
       iss: 'nestjs-prisma-api',
       aud: 'nestjs-prisma-client',
-      jti: crypto.randomUUID(),
+      jti: generateUUID(),
     };
 
     return this.jwtService.sign(payload);
@@ -35,7 +35,7 @@ export class TokenService {
       type: 'refresh',
       iss: 'nestjs-prisma-api',
       aud: 'nestjs-prisma-client',
-      jti: crypto.randomUUID(),
+      jti: generateUUID(),
     };
 
     const expiresInDays = this.configService.get(
