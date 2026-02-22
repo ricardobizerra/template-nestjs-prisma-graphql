@@ -75,13 +75,20 @@ describe('PasswordResetService', () => {
     });
 
     it('should queue email if user exists', async () => {
-      userService.findByEmail.mockResolvedValue({ id: '1', email: 't@t.com', password: 'h' });
+      userService.findByEmail.mockResolvedValue({
+        id: '1',
+        email: 't@t.com',
+        password: 'h',
+      });
 
       await service.requestPasswordReset('t@t.com');
 
       expect(prisma.passwordResetToken.deleteMany).toHaveBeenCalled();
       expect(prisma.passwordResetToken.create).toHaveBeenCalled();
-      expect(emailQueue.add).toHaveBeenCalledWith('password-reset', expect.any(Object));
+      expect(emailQueue.add).toHaveBeenCalledWith(
+        'password-reset',
+        expect.any(Object),
+      );
     });
 
     it('should update password on reset', async () => {
@@ -106,7 +113,9 @@ describe('PasswordResetService', () => {
 
     it('should throw if token invalid', async () => {
       prisma.passwordResetToken.findMany.mockResolvedValue([]);
-      await expect(service.resetPassword('t', 'p')).rejects.toThrow(BadRequestException);
+      await expect(service.resetPassword('t', 'p')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 });
