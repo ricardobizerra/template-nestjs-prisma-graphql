@@ -6,4 +6,4 @@ yarn.lock
 .agent/
 .agents/
 docs/
-prisma/migrations/
+drizzle/
