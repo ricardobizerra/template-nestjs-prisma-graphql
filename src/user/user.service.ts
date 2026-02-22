@@ -1,12 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { OAuthProvider, User } from '@prisma/client';
-import { PrismaService } from '@/lib/prisma/prisma.service';
+import { DrizzleService } from '@/lib/drizzle/drizzle.service';
+import { UserRepository } from './user.repository';
+import * as schema from '@/lib/drizzle/schema';
 import { RedisSubscriptionService } from '@/lib/redis/redis-subscription.service';
 import { genSalt, hash } from 'bcryptjs';
 import { getAvailableOAuthProviders } from '@/auth/auth.constants';
 import { KeysetPaginatedFindMany } from '@/utils/keyset-paginated-find-many';
 import { UserModel } from './models/user.model';
 import { OrderDirection } from '@/utils/args/ordenation.args';
+import { eq, and, isNull, sql } from 'drizzle-orm';
+
+type User = typeof schema.users.$inferSelect;
 
 interface FindManyArgs {
   paginationArgs: {
@@ -28,13 +32,13 @@ interface CreateUserInput {
   email: string;
   password: string;
   name: string;
-  role: 'ADMIN' | 'USER';
+  role: schema.Role;
 }
 
 interface CreateWithOAuthInput {
   email: string;
   name: string;
-  provider: OAuthProvider;
+  provider: schema.OAuthProvider;
   providerId: string;
   image?: string;
 }
@@ -42,14 +46,15 @@ interface CreateWithOAuthInput {
 @Injectable()
 export class UserService {
   constructor(
-    private readonly prismaService: PrismaService,
+    private readonly drizzleService: DrizzleService,
+    private readonly userRepository: UserRepository,
     private readonly redisSubscriptionService: RedisSubscriptionService,
   ) {}
 
   async findMany({ paginationArgs, searchArgs, ordenationArgs }: FindManyArgs) {
     const selectFields: (keyof User)[] = ['id', 'email', 'name', 'role'];
 
-    const paginator = new KeysetPaginatedFindMany<User>(this.prismaService, {
+    const paginator = new KeysetPaginatedFindMany<User>(this.drizzleService, {
       tableName: 'User',
       paginationArgs,
       searchArgs,
@@ -65,23 +70,36 @@ export class UserService {
     return paginator.findMany();
   }
 
-  async findOne(id: string) {
-    return this.prismaService.user.findUnique({
-      where: { id },
-    });
+  async findOne(id: string): Promise<User | null> {
+    return this.userRepository.findUnique(id) as Promise<User | null>;
   }
 
   async getAuthMethods(userId: string) {
-    const user = await this.prismaService.user.findUnique({
-      where: { id: userId },
-      select: {
-        password: true,
-        oauthAccounts: {
-          where: { deletedAt: null },
-          select: { provider: true },
-        },
-      },
-    });
+    const records = await this.drizzleService.db
+      .select({
+        id: schema.users.id,
+        password: schema.users.password,
+        provider: schema.oauthAccounts.provider,
+      })
+      .from(schema.users)
+      .leftJoin(
+        schema.oauthAccounts,
+        and(
+          eq(schema.users.id, schema.oauthAccounts.userId),
+          isNull(schema.oauthAccounts.deletedAt),
+        ),
+      )
+      .where(eq(schema.users.id, userId));
+
+    if (records.length === 0) return null;
+
+    // Aggregate the joined rows manually since we don't have Prisma's automatic joining
+    const user = {
+      password: records[0].password,
+      oauthAccounts: records
+        .filter((r) => r.provider)
+        .map((r) => ({ provider: r.provider })),
+    };
 
     if (!user) return null;
 
@@ -92,61 +110,80 @@ export class UserService {
     };
   }
 
-  async findByEmail(email: string) {
-    return this.prismaService.user.findUnique({
-      where: { email },
-    });
+  async findByEmail(email: string): Promise<User | null> {
+    return this.userRepository.findByEmail(email) as Promise<User | null>;
   }
 
-  async findByOAuthAccount(provider: OAuthProvider, providerId: string) {
-    const oauthAccount = await this.prismaService.oAuthAccount.findUnique({
-      where: {
-        provider_providerId: { provider, providerId },
-      },
-      include: { user: true },
-    });
+  async findByOAuthAccount(
+    provider: schema.OAuthProvider,
+    providerId: string,
+  ): Promise<User | null> {
+    const records = await this.drizzleService.db
+      .select({
+        user: schema.users,
+      })
+      .from(schema.oauthAccounts)
+      .innerJoin(schema.users, eq(schema.oauthAccounts.userId, schema.users.id))
+      .where(
+        and(
+          eq(schema.oauthAccounts.provider, provider),
+          eq(schema.oauthAccounts.providerId, providerId),
+        ),
+      )
+      .limit(1);
 
-    return oauthAccount?.user || null;
+    return (records[0]?.user as User) || null;
   }
 
   async linkOAuthAccount(
     userId: string,
-    provider: OAuthProvider,
+    provider: schema.OAuthProvider,
     providerId: string,
   ) {
-    return this.prismaService.oAuthAccount.create({
-      data: {
+    const inserted = await this.drizzleService.db
+      .insert(schema.oauthAccounts)
+      .values({
         provider,
         providerId,
         userId,
-      },
+      })
+      .returning();
+    return inserted[0];
+  }
+
+  async createWithOAuth(data: CreateWithOAuthInput): Promise<User> {
+    return this.drizzleService.executeTransaction(async (tx) => {
+      const [user] = await tx
+        .insert(schema.users)
+        .values({
+          email: data.email,
+          name: data.name,
+          image: data.image,
+          role: schema.Role.USER,
+        })
+        .returning();
+
+      await tx.insert(schema.oauthAccounts).values({
+        provider: data.provider,
+        providerId: data.providerId,
+        userId: user.id,
+      });
+
+      return user;
     });
   }
 
-  async createWithOAuth(data: CreateWithOAuthInput) {
-    return this.prismaService.user.create({
-      data: {
-        email: data.email,
-        name: data.name,
-        image: data.image,
-        role: 'USER',
-        oauthAccounts: {
-          create: {
-            provider: data.provider,
-            providerId: data.providerId,
-          },
-        },
-      },
-    });
-  }
-
-  async create(data: CreateUserInput) {
+  async create(data: CreateUserInput): Promise<User> {
     const salt = await genSalt(10);
     const hashedPassword = await hash(data.password, salt);
 
-    const createdUser = await this.prismaService.user.create({
-      data: { ...data, password: hashedPassword },
-    });
+    const [createdUser] = await this.drizzleService.db
+      .insert(schema.users)
+      .values({
+        ...data,
+        password: hashedPassword,
+      })
+      .returning();
 
     if (createdUser) {
       this.redisSubscriptionService.publish('userAdded', { userAdded: data });
@@ -156,17 +193,21 @@ export class UserService {
   }
 
   async revokeRefreshTokens(id: string) {
-    return this.prismaService.user.update({
-      where: { id },
-      data: { tokenVersion: { increment: 1 } },
-    });
+    const [user] = await this.drizzleService.db
+      .update(schema.users)
+      .set({ tokenVersion: sql`${schema.users.tokenVersion} + 1` })
+      .where(eq(schema.users.id, id))
+      .returning();
+
+    return user;
   }
 
   async update(id: string, data: { name?: string; image?: string }) {
-    const user = await this.prismaService.user.update({
-      where: { id },
-      data,
-    });
+    const [user] = await this.drizzleService.db
+      .update(schema.users)
+      .set(data as any)
+      .where(eq(schema.users.id, id))
+      .returning();
 
     const { password, ...userWithoutPassword } = user;
     return userWithoutPassword;

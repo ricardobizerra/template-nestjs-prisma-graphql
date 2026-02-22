@@ -7,8 +7,10 @@ import {
 import { SignIn } from './models/sign-in.model';
 import { userWithoutPassword } from '@/utils/user-without-password';
 import { UserModel } from '@/user/models/user.model';
-import { User } from '@prisma/client';
+import * as schema from '@/lib/drizzle/schema';
 import { UserService } from '@/user/user.service';
+
+type User = typeof schema.users.$inferSelect;
 import { HashingService } from '@/lib/hashing/hashing.service';
 import { TokenService } from './token.service';
 import { PasswordResetService } from './password-reset.service';

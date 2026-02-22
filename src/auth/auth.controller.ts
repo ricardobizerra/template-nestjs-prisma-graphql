@@ -19,7 +19,8 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ConfigService } from '@nestjs/config';
 import { Env } from '@/env';
-import { User } from '@prisma/client';
+import * as schema from '@/lib/drizzle/schema';
+type User = typeof schema.users.$inferSelect;
 import { getAvailableOAuthProviders } from './auth.constants';
 
 @ApiTags('Authentication')

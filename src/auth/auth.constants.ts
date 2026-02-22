@@ -1,4 +1,4 @@
-import { OAuthProvider } from '@prisma/client';
+import { OAuthProvider } from '@/lib/drizzle/schema';
 
 /**
  * OAuth providers that are currently implemented and available for connection.

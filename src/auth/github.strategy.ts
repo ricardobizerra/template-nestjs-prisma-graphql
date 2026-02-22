@@ -4,7 +4,7 @@ import { Strategy, Profile } from 'passport-github2';
 import { ConfigService } from '@nestjs/config';
 import { Env } from '@/env';
 import { UserService } from '@/user/user.service';
-import { OAuthProvider } from '@prisma/client';
+import { OAuthProvider } from '@/lib/drizzle/schema';
 
 @Injectable()
 export class GitHubStrategy extends PassportStrategy(Strategy, 'github') {

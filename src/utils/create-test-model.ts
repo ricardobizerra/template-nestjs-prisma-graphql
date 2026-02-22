@@ -4,20 +4,39 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { RedisCacheService } from '@/lib/redis/redis-cache.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { PrismaService } from '@/lib/prisma/prisma.service';
+import { DrizzleService } from '@/lib/drizzle/drizzle.service';
+import { UserRepository } from '@/user/user.repository';
 
-// Mock Prisma Service
-const mockPrismaService = {
-  $connect: vi.fn(),
-  $disconnect: vi.fn(),
-  user: {
-    findMany: vi.fn().mockResolvedValue([]),
-    findUnique: vi.fn().mockResolvedValue(null),
-    create: vi.fn().mockResolvedValue({}),
-    update: vi.fn().mockResolvedValue({}),
-    delete: vi.fn().mockResolvedValue({}),
-    count: vi.fn().mockResolvedValue(0),
+// Mock DrizzleService
+const mockDrizzleService = {
+  db: {
+    select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    leftJoin: vi.fn().mockReturnThis(),
+    innerJoin: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockResolvedValue([]),
+    insert: vi.fn().mockReturnThis(),
+    values: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    set: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
+    returning: vi.fn().mockResolvedValue([]),
   },
+  executeTransaction: vi
+    .fn()
+    .mockImplementation((fn) => fn(mockDrizzleService.db)),
+};
+
+// Mock UserRepository
+const mockUserRepository = {
+  findMany: vi.fn().mockResolvedValue([]),
+  findUnique: vi.fn().mockResolvedValue(null),
+  softDelete: vi.fn().mockResolvedValue([]),
+  restore: vi.fn().mockResolvedValue([]),
+  hardDelete: vi.fn().mockResolvedValue([]),
+  findSoftDeleted: vi.fn().mockResolvedValue([]),
+  findByEmail: vi.fn().mockResolvedValue(null),
 };
 
 // Mock Redis Cache Service
@@ -77,7 +96,8 @@ export const createTestModel = async (
     ],
     providers: [
       ...(metadata.providers ? metadata.providers : []),
-      { provide: PrismaService, useValue: mockPrismaService },
+      { provide: DrizzleService, useValue: mockDrizzleService },
+      { provide: UserRepository, useValue: mockUserRepository },
       { provide: RedisCacheService, useValue: mockRedisCacheService },
       {
         provide: RedisSubscriptionService,

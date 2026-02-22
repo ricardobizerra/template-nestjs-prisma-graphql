@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { OAuthProvider } from '@prisma/client';
+import { OAuthProvider } from '@/lib/drizzle/schema';
 
 export class AuthMethodsModel {
   @ApiProperty({

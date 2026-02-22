@@ -33,7 +33,10 @@ import { CurrentUser } from './user.decorator';
 import { AuthService } from '@/auth/auth.service';
 import { UserModel } from './models/user.model';
 import { AuthMethodsModel } from './models/auth-methods.model';
-import { Role, User } from '@prisma/client';
+import { Role } from '@/lib/drizzle/schema';
+import * as schema from '@/lib/drizzle/schema';
+
+type User = typeof schema.users.$inferSelect;
 
 @ApiTags('Users')
 @Controller('users')

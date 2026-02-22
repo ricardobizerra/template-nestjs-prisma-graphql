@@ -1,9 +1,11 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { User } from '@prisma/client';
+import * as schema from '@/lib/drizzle/schema';
 import { UserModel } from '@/user/models/user.model';
 import { Env } from '@/env';
+
+type User = typeof schema.users.$inferSelect;
 import { UserService } from '@/user/user.service';
 
 interface RefreshTokenPayload {

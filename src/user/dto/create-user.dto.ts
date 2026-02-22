@@ -6,7 +6,7 @@ import {
   IsString,
   MinLength,
 } from 'class-validator';
-import { Role } from '@prisma/client';
+import { Role } from '@/lib/drizzle/schema';
 
 export class CreateUserDto {
   @ApiProperty({ example: 'user@example.com' })

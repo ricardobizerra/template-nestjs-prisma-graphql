@@ -1,4 +1,6 @@
-import { User } from '@prisma/client';
+import * as schema from '@/lib/drizzle/schema';
+
+type User = typeof schema.users.$inferSelect;
 
 declare module 'fastify' {
   interface FastifyRequest {

@@ -1,10 +1,10 @@
-import { PrismaService } from '@/lib/prisma/prisma.service';
+import { DrizzleService } from '@/lib/drizzle/drizzle.service';
 import { PaginationArgs } from '@/utils/args/pagination.args';
 import { SearchArgs } from '@/utils/args/search.args';
-import { Prisma } from '@prisma/client';
 import { OrderDirection } from './args/ordenation.args';
 import { PageInfo } from './models/page-info.model';
 import { Edge, Connection } from './models/connection.model';
+import { sql, SQL } from 'drizzle-orm';
 
 /**
  * Cursor data structure for keyset pagination.
@@ -65,7 +65,7 @@ export class KeysetPaginatedFindMany<TDatabase extends { id: string }> {
   };
 
   constructor(
-    private readonly prismaService: PrismaService,
+    private readonly drizzleService: DrizzleService,
     private readonly config: KeysetPaginationConfig<TDatabase>,
   ) {
     const { after } = this.config.paginationArgs;
@@ -84,25 +84,25 @@ export class KeysetPaginatedFindMany<TDatabase extends { id: string }> {
   /**
    * Builds the WHERE clause for keyset pagination.
    */
-  private buildWhereClause(cursorData: CursorData | null): Prisma.Sql {
+  private buildWhereClause(cursorData: CursorData | null): SQL | null {
     const { orderBy, orderDirection } = this.config;
     const { last } = this.config.paginationArgs;
     const { search } = this.config.searchArgs;
 
-    const conditions: Prisma.Sql[] = [];
+    const conditions: SQL[] = [];
 
     // Search conditions
     if (search) {
       const searchConditions = this.config.searchByFields.map(
         (field) =>
-          Prisma.sql`unaccent(${Prisma.raw(String(field))}) ILIKE ${`%${search}%`}`,
+          sql`unaccent(${sql.raw(`"${String(field)}"`)}::text) ILIKE ${`%${search}%`}`,
       );
-      conditions.push(Prisma.sql`(${Prisma.join(searchConditions, ' OR ')})`);
+      conditions.push(sql`(${sql.join(searchConditions, sql` OR `)})`);
     }
 
     // Keyset pagination condition
     if (cursorData) {
-      const sortField = Prisma.raw(String(orderBy));
+      const sortField = sql.raw(`"${String(orderBy)}"`);
       const isAsc = orderDirection === OrderDirection.Asc;
       const isForward = !last;
 
@@ -110,42 +110,40 @@ export class KeysetPaginatedFindMany<TDatabase extends { id: string }> {
       // For backward pagination (last/before): get items BEFORE cursor
       const operator =
         (isAsc && isForward) || (!isAsc && !isForward) ? '>' : '<';
+      const opSql = sql.raw(operator);
 
-      // Use composite condition: (sortValue, id) > (cursorSortValue, cursorId)
-      // This ensures stable ordering even when sortValue has duplicates
       if (cursorData.sortValue !== null) {
         conditions.push(
-          Prisma.sql`(
-            ${sortField} ${Prisma.raw(operator)} ${cursorData.sortValue}
-            OR (${sortField} = ${cursorData.sortValue} AND id ${Prisma.raw(operator)} ${cursorData.id})
+          sql`(
+            ${sortField} ${opSql} ${cursorData.sortValue}
+            OR (${sortField} = ${cursorData.sortValue} AND "id" ${opSql} ${cursorData.id})
           )`,
         );
       } else {
-        conditions.push(
-          Prisma.sql`id ${Prisma.raw(operator)} ${cursorData.id}`,
-        );
+        conditions.push(sql`"id" ${opSql} ${cursorData.id}`);
       }
     }
 
     return conditions.length > 0
-      ? Prisma.sql` WHERE ${Prisma.join(conditions, ' AND ')}`
-      : Prisma.empty;
+      ? sql` WHERE ${sql.join(conditions, sql` AND `)} AND "deletedAt" IS NULL`
+      : sql` WHERE "deletedAt" IS NULL`;
   }
 
   /**
    * Builds the ORDER BY clause.
    */
-  private buildOrderByClause(): Prisma.Sql {
+  private buildOrderByClause(): SQL {
     const { orderBy, orderDirection } = this.config;
     const { last } = this.config.paginationArgs;
 
-    const sortField = Prisma.raw(String(orderBy));
+    const sortField = sql.raw(`"${String(orderBy)}"`);
     const isAsc = orderDirection === OrderDirection.Asc;
 
     // Reverse order for backward pagination (last/before)
     const direction = last ? (isAsc ? 'DESC' : 'ASC') : isAsc ? 'ASC' : 'DESC';
+    const directionSql = sql.raw(direction);
 
-    return Prisma.sql` ORDER BY ${sortField} ${Prisma.raw(direction)}, id ${Prisma.raw(direction)}`;
+    return sql` ORDER BY ${sortField} ${directionSql}, "id" ${directionSql}`;
   }
 
   /**
@@ -156,17 +154,18 @@ export class KeysetPaginatedFindMany<TDatabase extends { id: string }> {
     const limit = first || last || 20;
     const cursorData = this.getCursorData();
 
-    const selectClause = Prisma.join(
-      this.config.selectFields.map((f) => Prisma.raw(String(f))),
-      ', ',
+    const selectClause = sql.raw(
+      this.config.selectFields.map((f) => `"${String(f)}"`).join(', '),
     );
 
     const whereClause = this.buildWhereClause(cursorData);
     const orderByClause = this.buildOrderByClause();
+    const tableNameSql = sql.raw(`"${this.config.tableName}"`);
 
-    const items = await this.prismaService.$queryRaw<TDatabase[]>(
-      Prisma.sql`SELECT ${selectClause} FROM ${Prisma.raw(`"${this.config.tableName}"`)}${whereClause}${orderByClause} LIMIT ${limit + 1}`,
-    );
+    const query = sql`SELECT ${selectClause} FROM ${tableNameSql}${whereClause || sql``}${orderByClause} LIMIT ${limit + 1}`;
+
+    const result = await this.drizzleService.db.execute(query);
+    const items = result.rows as unknown as TDatabase[];
 
     // Fetch one extra to determine hasNextPage/hasPreviousPage
     const hasMore = items.length > limit;

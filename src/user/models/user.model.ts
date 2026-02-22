@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
+import { Role } from '@/lib/drizzle/schema';
 
 export class UserModel {
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
