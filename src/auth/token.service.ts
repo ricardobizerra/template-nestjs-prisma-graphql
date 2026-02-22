@@ -4,13 +4,10 @@ import { ConfigService } from '@nestjs/config';
 import { User } from '@prisma/client';
 import { UserModel } from '@/user/models/user.model';
 import { Env } from '@/env';
+import * as crypto from 'crypto';
 import { UserService } from '@/user/user.service';
 
-interface RefreshTokenPayload {
-  sub: string;
-  tokenVersion: number;
-  type: 'refresh';
-}
+import { RefreshTokenPayload } from './interfaces/jwt.interface';
 
 @Injectable()
 export class TokenService {
@@ -23,9 +20,9 @@ export class TokenService {
   generateAccessToken(user: User | UserModel): string {
     const payload = {
       sub: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
+      iss: 'nestjs-prisma-api',
+      aud: 'nestjs-prisma-client',
+      jti: crypto.randomUUID(),
     };
 
     return this.jwtService.sign(payload);
@@ -36,6 +33,9 @@ export class TokenService {
       sub: user.id,
       tokenVersion: user.tokenVersion,
       type: 'refresh',
+      iss: 'nestjs-prisma-api',
+      aud: 'nestjs-prisma-client',
+      jti: crypto.randomUUID(),
     };
 
     const expiresInDays = this.configService.get(

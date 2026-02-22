@@ -1,5 +1,10 @@
-export interface JwtPayload {
+import type { JwtPayload as BaseJwtPayload } from 'jsonwebtoken';
+
+export interface JwtPayload extends BaseJwtPayload {
   sub: string;
-  iat: number;
-  exp: number;
+}
+
+export interface RefreshTokenPayload extends JwtPayload {
+  tokenVersion: number;
+  type: 'refresh';
 }

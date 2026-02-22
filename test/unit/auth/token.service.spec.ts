@@ -53,9 +53,9 @@ describe('TokenService', () => {
       service.generateAccessToken(user as any);
       expect(jwtService.sign).toHaveBeenCalledWith({
         sub: '1',
-        email: 't@t.com',
-        name: 'N',
-        role: 'USER',
+        iss: 'nestjs-prisma-api',
+        aud: 'nestjs-prisma-client',
+        jti: expect.any(String),
       });
     });
   });
@@ -72,27 +72,39 @@ describe('TokenService', () => {
 
     it('should throw if token type is not refresh', async () => {
       jwtService.verify.mockReturnValue({ sub: '1', type: 'access' });
-      await expect(service.verifyRefreshToken('token')).rejects.toThrow('Invalid token type');
+      await expect(service.verifyRefreshToken('token')).rejects.toThrow(
+        'Invalid token type',
+      );
     });
 
     it('should throw if user not found during refresh', async () => {
       jwtService.verify.mockReturnValue({ sub: '1', type: 'refresh' });
       userService.findOne.mockResolvedValue(null);
-      await expect(service.verifyRefreshToken('token')).rejects.toThrow('User not found');
+      await expect(service.verifyRefreshToken('token')).rejects.toThrow(
+        'User not found',
+      );
     });
 
     it('should throw if tokenVersion mismatch (revoked)', async () => {
-      jwtService.verify.mockReturnValue({ sub: '1', tokenVersion: 0, type: 'refresh' });
+      jwtService.verify.mockReturnValue({
+        sub: '1',
+        tokenVersion: 0,
+        type: 'refresh',
+      });
       userService.findOne.mockResolvedValue({ id: '1', tokenVersion: 1 });
 
-      await expect(service.verifyRefreshToken('token')).rejects.toThrow(UnauthorizedException);
+      await expect(service.verifyRefreshToken('token')).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('should throw if jwt verification fails', async () => {
       jwtService.verify.mockImplementation(() => {
         throw new Error();
       });
-      await expect(service.verifyRefreshToken('token')).rejects.toThrow(UnauthorizedException);
+      await expect(service.verifyRefreshToken('token')).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('should refresh both tokens', async () => {
