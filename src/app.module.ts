@@ -21,6 +21,7 @@ import { HttpExceptionFilter } from '@/lib/filters';
 import { BullBoardModule } from '@/lib/bull-board';
 import { IdempotencyModule } from '@/lib/idempotency';
 import { HashingModule } from '@/lib/hashing/hashing.module';
+import { AuthGuard } from '@/auth/auth.guard';
 
 @Module({
   imports: [
@@ -70,6 +71,10 @@ import { HashingModule } from '@/lib/hashing/hashing.module';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: AuthGuard,
     },
     {
       provide: APP_INTERCEPTOR,

@@ -22,8 +22,10 @@ import { Env } from '@/env';
 import * as schema from '@/lib/drizzle/schema';
 type User = typeof schema.users.$inferSelect;
 import { getAvailableOAuthProviders } from './auth.constants';
+import { Public } from './public.decorator';
 
 @ApiTags('Authentication')
+@Public()
 @Controller('auth')
 export class AuthController {
   constructor(
