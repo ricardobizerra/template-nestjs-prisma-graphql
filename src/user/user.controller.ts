@@ -28,12 +28,12 @@ import {
 import { UserService } from '@/user/user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { Auth } from '@/auth/auth.decorator';
 import { CurrentUser } from './user.decorator';
 import { AuthService } from '@/auth/auth.service';
 import { UserModel } from './models/user.model';
 import { AuthMethodsModel } from './models/auth-methods.model';
 import { Role, User } from '@prisma/client';
+import { Public } from '@/auth/public.decorator';
 
 @ApiTags('Users')
 @Controller('users')
@@ -46,6 +46,7 @@ export class UserController {
     private readonly storageProvider: StorageProvider,
   ) {}
 
+  @Public()
   @Get()
   @ApiOperation({ summary: 'Find many users with keyset pagination' })
   @ApiResponse({ status: 200, description: 'Return paginated users' })
@@ -75,7 +76,6 @@ export class UserController {
     });
   }
 
-  @Auth()
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user profile' })
@@ -89,7 +89,6 @@ export class UserController {
     return this.userService.findOne(user.id);
   }
 
-  @Auth()
   @Patch('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update current user profile' })
@@ -108,7 +107,6 @@ export class UserController {
   }
 
   @Post('avatar')
-  @Auth()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Upload user avatar' })
   @ApiConsumes('multipart/form-data')
@@ -157,7 +155,6 @@ export class UserController {
     return { url };
   }
 
-  @Auth()
   @Get('me/auth-methods')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user authentication methods' })
@@ -171,6 +168,7 @@ export class UserController {
     return this.userService.getAuthMethods(user.id);
   }
 
+  @Public()
   @Post()
   @ApiOperation({ summary: 'Create a new user' })
   @ApiResponse({ status: 201, description: 'User created successfully' })

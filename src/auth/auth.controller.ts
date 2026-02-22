@@ -21,8 +21,10 @@ import { ConfigService } from '@nestjs/config';
 import { Env } from '@/env';
 import { User } from '@prisma/client';
 import { getAvailableOAuthProviders } from './auth.constants';
+import { Public } from './public.decorator';
 
 @ApiTags('Authentication')
+@Public()
 @Controller('auth')
 export class AuthController {
   constructor(
