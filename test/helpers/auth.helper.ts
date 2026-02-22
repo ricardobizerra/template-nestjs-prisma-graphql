@@ -1,7 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { createTestUser, CreateUserResult } from './user.factory';
-import { Role } from '@prisma/client';
+import { Role } from '@/lib/drizzle/schema';
 
 export interface AuthenticatedUser {
   user: CreateUserResult;

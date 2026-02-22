@@ -52,7 +52,8 @@ describe('AuthService', () => {
     userService = module.get<UserService>(UserService);
     hashingService = module.get<HashingService>(HashingService);
     tokenService = module.get<TokenService>(TokenService);
-    passwordResetService = module.get<PasswordResetService>(PasswordResetService);
+    passwordResetService =
+      module.get<PasswordResetService>(PasswordResetService);
   });
 
   afterEach(() => {
@@ -65,7 +66,12 @@ describe('AuthService', () => {
 
   describe('validateEmailAndPassword', () => {
     it('should return user without password on success', async () => {
-      const user = { id: '1', email: 't@t.com', password: 'hashed', role: 'USER' };
+      const user = {
+        id: '1',
+        email: 't@t.com',
+        password: 'hashed',
+        role: 'USER',
+      };
       userService.findByEmail.mockResolvedValue(user);
       hashingService.compare.mockResolvedValue(true);
 
@@ -76,18 +82,28 @@ describe('AuthService', () => {
 
     it('should throw UnauthorizedException if user not found', async () => {
       userService.findByEmail.mockResolvedValue(null);
-      await expect(service.validateEmailAndPassword('t@t.com', 'p')).rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.validateEmailAndPassword('t@t.com', 'p'),
+      ).rejects.toThrow(UnauthorizedException);
     });
 
     it('should throw UnauthorizedException if user has no password (OAuth-only)', async () => {
       userService.findByEmail.mockResolvedValue({ id: '1', email: 't@t.com' });
-      await expect(service.validateEmailAndPassword('t@t.com', 'p')).rejects.toThrow('This account uses OAuth login');
+      await expect(
+        service.validateEmailAndPassword('t@t.com', 'p'),
+      ).rejects.toThrow('This account uses OAuth login');
     });
 
     it('should throw UnauthorizedException if password incorrect', async () => {
-      userService.findByEmail.mockResolvedValue({ id: '1', email: 't@t.com', password: 'h' });
+      userService.findByEmail.mockResolvedValue({
+        id: '1',
+        email: 't@t.com',
+        password: 'h',
+      });
       hashingService.compare.mockResolvedValue(false);
-      await expect(service.validateEmailAndPassword('t@t.com', 'p')).rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.validateEmailAndPassword('t@t.com', 'p'),
+      ).rejects.toThrow(UnauthorizedException);
     });
   });
 
@@ -100,7 +116,9 @@ describe('AuthService', () => {
 
     it('should throw if user not found', async () => {
       userService.findOne.mockResolvedValue(null);
-      await expect(service.validateUserId('1')).rejects.toThrow(UnauthorizedException);
+      await expect(service.validateUserId('1')).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
   });
 
@@ -108,13 +126,17 @@ describe('AuthService', () => {
     it('should delegate generateAccessToken', () => {
       tokenService.generateAccessToken.mockReturnValue('token');
       expect(service.generateAccessToken({ id: '1' } as any)).toBe('token');
-      expect(tokenService.generateAccessToken).toHaveBeenCalledWith({ id: '1' });
+      expect(tokenService.generateAccessToken).toHaveBeenCalledWith({
+        id: '1',
+      });
     });
 
     it('should delegate generateRefreshToken', () => {
       tokenService.generateRefreshToken.mockReturnValue('token');
       expect(service.generateRefreshToken({ id: '1' } as any)).toBe('token');
-      expect(tokenService.generateRefreshToken).toHaveBeenCalledWith({ id: '1' });
+      expect(tokenService.generateRefreshToken).toHaveBeenCalledWith({
+        id: '1',
+      });
     });
 
     it('should delegate verifyRefreshToken', async () => {
@@ -125,7 +147,10 @@ describe('AuthService', () => {
     });
 
     it('should delegate refreshAccessToken', async () => {
-      tokenService.refreshAccessToken.mockResolvedValue({ accessToken: 'a', refreshToken: 'r' });
+      tokenService.refreshAccessToken.mockResolvedValue({
+        accessToken: 'a',
+        refreshToken: 'r',
+      });
       const res = await service.refreshAccessToken('token');
       expect(res).toEqual({ accessToken: 'a', refreshToken: 'r' });
       expect(tokenService.refreshAccessToken).toHaveBeenCalledWith('token');
@@ -141,7 +166,12 @@ describe('AuthService', () => {
 
   describe('SignIn', () => {
     it('should return tokens and user', async () => {
-      const user = { id: '1', email: 't@t.com', password: 'hashed', tokenVersion: 0 };
+      const user = {
+        id: '1',
+        email: 't@t.com',
+        password: 'hashed',
+        tokenVersion: 0,
+      };
       userService.findByEmail.mockResolvedValue(user);
       userService.findOne.mockResolvedValue(user);
       hashingService.compare.mockResolvedValue(true);
@@ -160,19 +190,26 @@ describe('AuthService', () => {
       userService.findOne.mockResolvedValue(null);
       hashingService.compare.mockResolvedValue(true);
 
-      await expect(service.signIn('t@t.com', 'p')).rejects.toThrow(UnauthorizedException);
+      await expect(service.signIn('t@t.com', 'p')).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
   });
 
   describe('Password Reset Delegation', () => {
     it('should delegate requestPasswordReset', async () => {
       await service.requestPasswordReset('t@t.com');
-      expect(passwordResetService.requestPasswordReset).toHaveBeenCalledWith('t@t.com');
+      expect(passwordResetService.requestPasswordReset).toHaveBeenCalledWith(
+        't@t.com',
+      );
     });
 
     it('should delegate resetPassword', async () => {
       await service.resetPassword('token', 'new-pass');
-      expect(passwordResetService.resetPassword).toHaveBeenCalledWith('token', 'new-pass');
+      expect(passwordResetService.resetPassword).toHaveBeenCalledWith(
+        'token',
+        'new-pass',
+      );
     });
   });
 });

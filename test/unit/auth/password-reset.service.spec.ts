@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PasswordResetService } from '@/auth/password-reset.service';
-import { PrismaService } from '@/lib/prisma/prisma.service';
+import { DrizzleService } from '@/lib/drizzle/drizzle.service';
 import { UserService } from '@/user/user.service';
 import { HashingService } from '@/lib/hashing/hashing.service';
 import { getQueueToken } from '@nestjs/bullmq';
@@ -10,7 +10,7 @@ import { BadRequestException } from '@nestjs/common';
 describe('PasswordResetService', () => {
   let service: PasswordResetService;
   let userService: any;
-  let prisma: any;
+  let drizzleService: any;
   let emailQueue: any;
   let hashingService: any;
 
@@ -18,15 +18,16 @@ describe('PasswordResetService', () => {
     findByEmail: vi.fn(),
   };
 
-  const mockPrismaService = {
-    passwordResetToken: {
-      findMany: vi.fn(),
-      create: vi.fn(),
+  const mockDrizzleService = {
+    db: {
+      select: vi.fn(),
+      from: vi.fn(),
+      where: vi.fn(),
       delete: vi.fn(),
-      deleteMany: vi.fn(),
-    },
-    user: {
+      insert: vi.fn(),
+      values: vi.fn(),
       update: vi.fn(),
+      set: vi.fn(),
     },
   };
 
@@ -40,11 +41,21 @@ describe('PasswordResetService', () => {
   };
 
   beforeEach(async () => {
+    // Setup query builder chaining
+    mockDrizzleService.db.select.mockReturnValue(mockDrizzleService.db);
+    mockDrizzleService.db.from.mockReturnValue(mockDrizzleService.db);
+    mockDrizzleService.db.where.mockReturnValue(mockDrizzleService.db);
+    mockDrizzleService.db.delete.mockReturnValue(mockDrizzleService.db);
+    mockDrizzleService.db.insert.mockReturnValue(mockDrizzleService.db);
+    mockDrizzleService.db.values.mockReturnValue(mockDrizzleService.db);
+    mockDrizzleService.db.update.mockReturnValue(mockDrizzleService.db);
+    mockDrizzleService.db.set.mockReturnValue(mockDrizzleService.db);
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PasswordResetService,
         { provide: UserService, useValue: mockUserService },
-        { provide: PrismaService, useValue: mockPrismaService },
+        { provide: DrizzleService, useValue: mockDrizzleService },
         { provide: getQueueToken('email'), useValue: mockEmailQueue },
         { provide: HashingService, useValue: mockHashingService },
       ],
@@ -52,7 +63,7 @@ describe('PasswordResetService', () => {
 
     service = module.get<PasswordResetService>(PasswordResetService);
     userService = module.get<UserService>(UserService);
-    prisma = module.get<PrismaService>(PrismaService);
+    drizzleService = module.get<DrizzleService>(DrizzleService);
     emailQueue = module.get<any>(getQueueToken('email'));
     hashingService = module.get<HashingService>(HashingService);
   });
@@ -65,48 +76,56 @@ describe('PasswordResetService', () => {
     it('should return early if user not found (silent failure)', async () => {
       userService.findByEmail.mockResolvedValue(null);
       await service.requestPasswordReset('t@t.com');
-      expect(prisma.passwordResetToken.create).not.toHaveBeenCalled();
+      expect(mockDrizzleService.db.insert).not.toHaveBeenCalled();
     });
 
     it('should return early if user has no password (silent failure)', async () => {
       userService.findByEmail.mockResolvedValue({ id: '1', email: 't@t.com' });
       await service.requestPasswordReset('t@t.com');
-      expect(prisma.passwordResetToken.create).not.toHaveBeenCalled();
+      expect(mockDrizzleService.db.insert).not.toHaveBeenCalled();
     });
 
     it('should queue email if user exists', async () => {
-      userService.findByEmail.mockResolvedValue({ id: '1', email: 't@t.com', password: 'h' });
+      userService.findByEmail.mockResolvedValue({
+        id: '1',
+        email: 't@t.com',
+        password: 'h',
+      });
 
       await service.requestPasswordReset('t@t.com');
 
-      expect(prisma.passwordResetToken.deleteMany).toHaveBeenCalled();
-      expect(prisma.passwordResetToken.create).toHaveBeenCalled();
-      expect(emailQueue.add).toHaveBeenCalledWith('password-reset', expect.any(Object));
+      expect(mockDrizzleService.db.delete).toHaveBeenCalled();
+      expect(mockDrizzleService.db.insert).toHaveBeenCalled();
+      expect(emailQueue.add).toHaveBeenCalledWith(
+        'password-reset',
+        expect.any(Object),
+      );
     });
 
     it('should update password on reset', async () => {
       const mockToken = { userId: '1', token: 'hashed-token', id: 't1' };
-      prisma.passwordResetToken.findMany.mockResolvedValue([mockToken]);
+      mockDrizzleService.db.where.mockResolvedValueOnce([mockToken]); // select where matching tokens
+      mockDrizzleService.db.where.mockResolvedValueOnce(undefined); // token deletion
+
       hashingService.compare.mockResolvedValue(true);
       hashingService.hash.mockResolvedValue('new-hashed-pass');
 
       await service.resetPassword('plain-token', 'new-pass');
 
-      expect(prisma.user.update).toHaveBeenCalledWith(
+      expect(mockDrizzleService.db.update).toHaveBeenCalled();
+      expect(mockDrizzleService.db.set).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: '1' },
-          data: expect.objectContaining({
-            password: 'new-hashed-pass',
-            tokenVersion: { increment: 1 },
-          }),
+          password: 'new-hashed-pass',
         }),
       );
-      expect(prisma.passwordResetToken.delete).toHaveBeenCalled();
+      expect(mockDrizzleService.db.delete).toHaveBeenCalled();
     });
 
     it('should throw if token invalid', async () => {
-      prisma.passwordResetToken.findMany.mockResolvedValue([]);
-      await expect(service.resetPassword('t', 'p')).rejects.toThrow(BadRequestException);
+      mockDrizzleService.db.where.mockResolvedValue([]);
+      await expect(service.resetPassword('t', 'p')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 });

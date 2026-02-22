@@ -3,7 +3,7 @@ import { GoogleStrategy } from '@/auth/google.strategy';
 import { UserService } from '@/user/user.service';
 import { ConfigService } from '@nestjs/config';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
-import { OAuthProvider } from '@prisma/client';
+import { OAuthProvider } from '@/lib/drizzle/schema';
 
 describe('GoogleStrategy', () => {
   let strategy: GoogleStrategy;

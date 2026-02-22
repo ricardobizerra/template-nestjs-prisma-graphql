@@ -8,7 +8,10 @@ import { Reflector } from '@nestjs/core';
 import { of, throwError, firstValueFrom } from 'rxjs';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { IdempotencyInterceptor } from '@/lib/idempotency/idempotency.interceptor';
-import { IdempotencyService, CachedResponse } from '@/lib/idempotency/idempotency.service';
+import {
+  IdempotencyService,
+  CachedResponse,
+} from '@/lib/idempotency/idempotency.service';
 import {
   IDEMPOTENCY_HEADER,
   IDEMPOTENCY_METADATA_KEY,

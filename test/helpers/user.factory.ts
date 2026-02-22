@@ -1,8 +1,10 @@
-import { PrismaClient, Role, User } from '@prisma/client';
+import { Role, users } from '@/lib/drizzle/schema';
 import { hash } from 'bcryptjs';
 import { randomUUID } from 'crypto';
+import { getTestDb } from './database.helper';
+import { eq } from 'drizzle-orm';
 
-const prisma = new PrismaClient();
+const db = getTestDb();
 
 export interface CreateUserOptions {
   email?: string;
@@ -11,8 +13,13 @@ export interface CreateUserOptions {
   role?: Role;
 }
 
-export interface CreateUserResult extends Omit<User, 'password'> {
+export interface CreateUserResult {
+  id: string;
+  email: string;
+  name: string;
+  role: Role;
   plainPassword: string;
+  image?: string | null;
 }
 
 /**
@@ -29,14 +36,15 @@ export async function createTestUser(
   const plainPassword = options.password || 'TestPass123!';
   const hashedPassword = await hash(plainPassword, 10);
 
-  const user = await prisma.user.create({
-    data: {
+  const [user] = await db
+    .insert(users)
+    .values({
       email: options.email || `test-${randomUUID()}@example.com`,
       name: options.name || 'Test User',
       password: hashedPassword,
       role: options.role || Role.USER,
-    },
-  });
+    })
+    .returning();
 
   const { password: _, ...userWithoutPassword } = user;
 
@@ -59,14 +67,10 @@ export async function createTestAdmin(
  * Deletes a specific user by ID.
  */
 export async function deleteTestUser(userId: string): Promise<void> {
-  await prisma.user.delete({ where: { id: userId } }).catch(() => {
-    // Ignore if user doesn't exist
-  });
-}
-
-/**
- * Gets the Prisma client for direct database access in tests.
- */
-export function getPrismaClient(): PrismaClient {
-  return prisma;
+  await db
+    .delete(users)
+    .where(eq(users.id, userId))
+    .catch(() => {
+      // Ignore if user doesn't exist
+    });
 }

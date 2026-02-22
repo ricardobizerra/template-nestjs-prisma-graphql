@@ -1,4 +1,4 @@
-import { Role } from '@prisma/client';
+import { Role } from '@/lib/drizzle/schema';
 import { Test, TestingModule } from '@nestjs/testing';
 import { RoleGuard } from '@/auth/role.guard';
 import { Reflector } from '@nestjs/core';

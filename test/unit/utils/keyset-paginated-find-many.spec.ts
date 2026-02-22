@@ -4,11 +4,11 @@ import {
   decodeCursor,
   CursorData,
 } from '@/utils/keyset-paginated-find-many';
-import { PrismaService } from '@/lib/prisma/prisma.service';
+import { DrizzleService } from '@/lib/drizzle/drizzle.service';
 import { OrderDirection } from '@/utils/args/ordenation.args';
 
 describe('KeysetPaginatedFindMany', () => {
-  let mockPrismaService: Partial<PrismaService>;
+  let mockDrizzleService: any;
 
   interface TestUser {
     id: string;
@@ -26,8 +26,11 @@ describe('KeysetPaginatedFindMany', () => {
     }));
 
   beforeEach(() => {
-    mockPrismaService = {
-      $queryRaw: vi.fn(),
+    mockDrizzleService = {
+      db: {
+        execute: vi.fn(),
+      },
+      executeTransaction: vi.fn(),
     };
   });
 
@@ -87,12 +90,10 @@ describe('KeysetPaginatedFindMany', () => {
 
   describe('findMany with empty results', () => {
     it('should return empty edges and correct pageInfo', async () => {
-      (
-        mockPrismaService.$queryRaw as ReturnType<typeof vi.fn>
-      ).mockResolvedValue([]);
+      mockDrizzleService.db.execute.mockResolvedValue({ rows: [] });
 
       const paginator = new KeysetPaginatedFindMany<TestUser>(
-        mockPrismaService as PrismaService,
+        mockDrizzleService as DrizzleService,
         {
           tableName: 'User',
           paginationArgs: { first: 10, after: null, last: null, before: null },
@@ -117,12 +118,10 @@ describe('KeysetPaginatedFindMany', () => {
   describe('Relay Connection spec compliance', () => {
     it('should return edges with cursor and node properties', async () => {
       const mockItems = createMockItems(3);
-      (
-        mockPrismaService.$queryRaw as ReturnType<typeof vi.fn>
-      ).mockResolvedValue(mockItems);
+      mockDrizzleService.db.execute.mockResolvedValue({ rows: mockItems });
 
       const paginator = new KeysetPaginatedFindMany<TestUser>(
-        mockPrismaService as PrismaService,
+        mockDrizzleService as DrizzleService,
         {
           tableName: 'User',
           paginationArgs: { first: 10, after: null, last: null, before: null },
@@ -152,12 +151,10 @@ describe('KeysetPaginatedFindMany', () => {
 
     it('should return pageInfo with required fields', async () => {
       const mockItems = createMockItems(3);
-      (
-        mockPrismaService.$queryRaw as ReturnType<typeof vi.fn>
-      ).mockResolvedValue(mockItems);
+      mockDrizzleService.db.execute.mockResolvedValue({ rows: mockItems });
 
       const paginator = new KeysetPaginatedFindMany<TestUser>(
-        mockPrismaService as PrismaService,
+        mockDrizzleService as DrizzleService,
         {
           tableName: 'User',
           paginationArgs: { first: 10, after: null, last: null, before: null },
@@ -184,12 +181,10 @@ describe('KeysetPaginatedFindMany', () => {
     it('should set hasNextPage true when more items exist', async () => {
       // Return 11 items when limit is 10 (fetches limit + 1)
       const mockItems = createMockItems(11);
-      (
-        mockPrismaService.$queryRaw as ReturnType<typeof vi.fn>
-      ).mockResolvedValue(mockItems);
+      mockDrizzleService.db.execute.mockResolvedValue({ rows: mockItems });
 
       const paginator = new KeysetPaginatedFindMany<TestUser>(
-        mockPrismaService as PrismaService,
+        mockDrizzleService as DrizzleService,
         {
           tableName: 'User',
           paginationArgs: { first: 10, after: null, last: null, before: null },
@@ -210,14 +205,12 @@ describe('KeysetPaginatedFindMany', () => {
 
     it('should set hasPreviousPage true when after cursor is provided', async () => {
       const mockItems = createMockItems(5);
-      (
-        mockPrismaService.$queryRaw as ReturnType<typeof vi.fn>
-      ).mockResolvedValue(mockItems);
+      mockDrizzleService.db.execute.mockResolvedValue({ rows: mockItems });
 
       const afterCursor = encodeCursor({ id: 'prev-id', sortValue: 'A' });
 
       const paginator = new KeysetPaginatedFindMany<TestUser>(
-        mockPrismaService as PrismaService,
+        mockDrizzleService as DrizzleService,
         {
           tableName: 'User',
           paginationArgs: {
@@ -261,18 +254,18 @@ describe('KeysetPaginatedFindMany', () => {
 
   describe('data consistency (navigation back and forth)', () => {
     it('should return same first page data when navigating back from second page', async () => {
-      // Simulate dataset of 10 items, paginating with first=5
+      // Simulate dataset of 10 items, pagpaginating with first=5
       const allItems = createMockItems(10);
       const firstPageItems = allItems.slice(0, 6); // +1 for hasNextPage check
       const secondPageItems = allItems.slice(5, 10);
 
       // First page request
-      (
-        mockPrismaService.$queryRaw as ReturnType<typeof vi.fn>
-      ).mockResolvedValueOnce(firstPageItems);
+      mockDrizzleService.db.execute.mockResolvedValueOnce({
+        rows: firstPageItems,
+      });
 
       const firstPagePaginator = new KeysetPaginatedFindMany<TestUser>(
-        mockPrismaService as PrismaService,
+        mockDrizzleService as DrizzleService,
         {
           tableName: 'User',
           paginationArgs: { first: 5, after: null, last: null, before: null },
@@ -293,12 +286,12 @@ describe('KeysetPaginatedFindMany', () => {
       expect(firstPageResult.edges[4].node.id).toBe('id-005');
 
       // Second page request (using endCursor from first page)
-      (
-        mockPrismaService.$queryRaw as ReturnType<typeof vi.fn>
-      ).mockResolvedValueOnce(secondPageItems);
+      mockDrizzleService.db.execute.mockResolvedValueOnce({
+        rows: secondPageItems,
+      });
 
       const secondPagePaginator = new KeysetPaginatedFindMany<TestUser>(
-        mockPrismaService as PrismaService,
+        mockDrizzleService as DrizzleService,
         {
           tableName: 'User',
           paginationArgs: {
@@ -322,12 +315,12 @@ describe('KeysetPaginatedFindMany', () => {
       expect(secondPageResult.pageInfo.hasPreviousPage).toBe(true);
 
       // Go back to first page using before cursor (simulated)
-      (
-        mockPrismaService.$queryRaw as ReturnType<typeof vi.fn>
-      ).mockResolvedValueOnce(firstPageItems.slice(0, 5));
+      mockDrizzleService.db.execute.mockResolvedValueOnce({
+        rows: firstPageItems.slice(0, 5),
+      });
 
       const backToFirstPaginator = new KeysetPaginatedFindMany<TestUser>(
-        mockPrismaService as PrismaService,
+        mockDrizzleService as DrizzleService,
         {
           tableName: 'User',
           paginationArgs: { first: 5, after: null, last: null, before: null },
@@ -378,12 +371,12 @@ describe('KeysetPaginatedFindMany', () => {
       const allItems = createMockItems(15);
 
       // Page 1: items 1-5
-      (
-        mockPrismaService.$queryRaw as ReturnType<typeof vi.fn>
-      ).mockResolvedValueOnce(allItems.slice(0, 6)); // +1 for hasNextPage
+      mockDrizzleService.db.execute.mockResolvedValueOnce({
+        rows: allItems.slice(0, 6),
+      }); // +1 for hasNextPage
 
       const page1 = new KeysetPaginatedFindMany<TestUser>(
-        mockPrismaService as PrismaService,
+        mockDrizzleService as DrizzleService,
         {
           tableName: 'User',
           paginationArgs: { first: 5, after: null, last: null, before: null },
@@ -398,12 +391,12 @@ describe('KeysetPaginatedFindMany', () => {
       const result1 = await page1.findMany();
 
       // Page 2: items 6-10
-      (
-        mockPrismaService.$queryRaw as ReturnType<typeof vi.fn>
-      ).mockResolvedValueOnce(allItems.slice(5, 11)); // +1 for hasNextPage
+      mockDrizzleService.db.execute.mockResolvedValueOnce({
+        rows: allItems.slice(5, 11),
+      }); // +1 for hasNextPage
 
       const page2 = new KeysetPaginatedFindMany<TestUser>(
-        mockPrismaService as PrismaService,
+        mockDrizzleService as DrizzleService,
         {
           tableName: 'User',
           paginationArgs: {

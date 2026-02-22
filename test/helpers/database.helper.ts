@@ -1,6 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
 
-const prisma = new PrismaClient();
+const pool = new Pool();
+const db = drizzle(pool);
 
 /**
  * List of tables to clean, in order respecting foreign key constraints.
@@ -20,7 +22,7 @@ const TABLES_TO_CLEAN = ['PasswordResetToken', 'OAuthAccount', 'User'] as const;
 export async function cleanDatabase(): Promise<void> {
   // Delete in order respecting foreign keys
   for (const table of TABLES_TO_CLEAN) {
-    await prisma.$executeRawUnsafe(`TRUNCATE TABLE "${table}" CASCADE`);
+    await pool.query(`TRUNCATE TABLE "${table}" CASCADE`);
   }
 }
 
@@ -32,7 +34,7 @@ export async function cleanDatabase(): Promise<void> {
  */
 export async function cleanTables(tables: string[]): Promise<void> {
   for (const table of tables) {
-    await prisma.$executeRawUnsafe(`TRUNCATE TABLE "${table}" CASCADE`);
+    await pool.query(`TRUNCATE TABLE "${table}" CASCADE`);
   }
 }
 
@@ -54,12 +56,12 @@ export async function cleanUsers(): Promise<void> {
  * });
  */
 export async function disconnectDatabase(): Promise<void> {
-  await prisma.$disconnect();
+  await pool.end();
 }
 
 /**
- * Gets the Prisma client for direct database operations.
+ * Gets the Drizzle client for direct database operations.
  */
-export function getTestPrisma(): PrismaClient {
-  return prisma;
+export function getTestDb() {
+  return db;
 }

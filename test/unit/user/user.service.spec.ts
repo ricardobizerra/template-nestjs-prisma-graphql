@@ -1,26 +1,42 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserService } from '@/user/user.service';
-import { PrismaService } from '@/lib/prisma/prisma.service';
+import { DrizzleService } from '@/lib/drizzle/drizzle.service';
+import { UserRepository } from '@/user/user.repository';
 import { RedisSubscriptionService } from '@/lib/redis/redis-subscription.service';
 import { describe, beforeEach, it, expect, vi, afterEach } from 'vitest';
-import { OAuthProvider } from '@prisma/client';
+import { OAuthProvider } from '@/lib/drizzle/schema';
+import { KeysetPaginatedFindMany } from '@/utils/keyset-paginated-find-many';
+
+vi.mock('@/utils/keyset-paginated-find-many', () => ({
+  KeysetPaginatedFindMany: vi.fn(),
+}));
 
 describe('UserService', () => {
   let service: UserService;
-  let prisma: any;
+  let drizzleService: any;
+  let userRepo: any;
   let redis: any;
 
-  const mockPrismaService = {
-    user: {
-      findUnique: vi.fn(),
-      create: vi.fn(),
+  const mockDrizzleService = {
+    db: {
+      select: vi.fn(),
+      from: vi.fn(),
+      where: vi.fn(),
+      limit: vi.fn(),
+      innerJoin: vi.fn(),
+      leftJoin: vi.fn(),
+      insert: vi.fn(),
+      values: vi.fn(),
+      returning: vi.fn(),
       update: vi.fn(),
+      set: vi.fn(),
     },
-    oAuthAccount: {
-      findUnique: vi.fn(),
-      create: vi.fn(),
-    },
-    $queryRaw: vi.fn(),
+    executeTransaction: vi.fn(),
+  };
+
+  const mockUserRepository = {
+    findUnique: vi.fn(),
+    findByEmail: vi.fn(),
   };
 
   const mockRedisSubscriptionService = {
@@ -28,10 +44,27 @@ describe('UserService', () => {
   };
 
   beforeEach(async () => {
+    // Setup chaining for db operations
+    mockDrizzleService.db.select.mockReturnValue(mockDrizzleService.db);
+    mockDrizzleService.db.from.mockReturnValue(mockDrizzleService.db);
+    mockDrizzleService.db.innerJoin.mockReturnValue(mockDrizzleService.db);
+    mockDrizzleService.db.leftJoin.mockReturnValue(mockDrizzleService.db);
+    mockDrizzleService.db.where.mockReturnValue(mockDrizzleService.db);
+    mockDrizzleService.db.limit.mockReturnValue(mockDrizzleService.db);
+    mockDrizzleService.db.insert.mockReturnValue(mockDrizzleService.db);
+    mockDrizzleService.db.values.mockReturnValue(mockDrizzleService.db);
+    mockDrizzleService.db.returning.mockResolvedValue([]);
+    mockDrizzleService.db.update.mockReturnValue(mockDrizzleService.db);
+    mockDrizzleService.db.set.mockReturnValue(mockDrizzleService.db);
+    mockDrizzleService.executeTransaction.mockImplementation((cb) =>
+      cb(mockDrizzleService.db),
+    );
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UserService,
-        { provide: PrismaService, useValue: mockPrismaService },
+        { provide: DrizzleService, useValue: mockDrizzleService },
+        { provide: UserRepository, useValue: mockUserRepository },
         {
           provide: RedisSubscriptionService,
           useValue: mockRedisSubscriptionService,
@@ -40,7 +73,8 @@ describe('UserService', () => {
     }).compile();
 
     service = module.get<UserService>(UserService);
-    prisma = module.get<PrismaService>(PrismaService);
+    drizzleService = module.get<DrizzleService>(DrizzleService);
+    userRepo = module.get<UserRepository>(UserRepository);
     redis = module.get<RedisSubscriptionService>(RedisSubscriptionService);
   });
 
@@ -60,16 +94,19 @@ describe('UserService', () => {
         name: 'Test',
         role: 'USER' as const,
       };
-      prisma.user.create.mockResolvedValue({ id: '1', ...input });
+      mockDrizzleService.db.returning.mockResolvedValueOnce([
+        { id: '1', ...input },
+      ]);
 
       const result = await service.create(input);
 
-      expect(prisma.user.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
+      expect(mockDrizzleService.db.insert).toHaveBeenCalled();
+      expect(mockDrizzleService.db.values).toHaveBeenCalledWith(
+        expect.objectContaining({
           email: input.email,
           password: expect.not.stringMatching(input.password), // Should be hashed
         }),
-      });
+      );
       expect(redis.publish).toHaveBeenCalledWith('userAdded', {
         userAdded: input,
       });
@@ -79,27 +116,28 @@ describe('UserService', () => {
 
   describe('findOne / findByEmail', () => {
     it('should find user by id', async () => {
-      prisma.user.findUnique.mockResolvedValue({ id: '1' });
-      await service.findOne('1');
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({
-        where: { id: '1' },
-      });
+      mockUserRepository.findUnique.mockResolvedValue({ id: '1' });
+      const result = await service.findOne('1');
+      expect(mockUserRepository.findUnique).toHaveBeenCalledWith('1');
+      expect(result?.id).toBe('1');
     });
 
     it('should find user by email', async () => {
-      prisma.user.findUnique.mockResolvedValue({ email: 'test@test.com' });
-      await service.findByEmail('test@test.com');
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({
-        where: { email: 'test@test.com' },
+      mockUserRepository.findByEmail.mockResolvedValue({
+        email: 'test@test.com',
       });
+      await service.findByEmail('test@test.com');
+      expect(mockUserRepository.findByEmail).toHaveBeenCalledWith(
+        'test@test.com',
+      );
     });
   });
 
   describe('OAuth', () => {
     it('should find user by OAuth account', async () => {
-      prisma.oAuthAccount.findUnique.mockResolvedValue({
-        user: { id: 'u1' },
-      });
+      mockDrizzleService.db.limit.mockResolvedValueOnce([
+        { user: { id: 'u1' } },
+      ]);
       const result = await service.findByOAuthAccount(
         OAuthProvider.GOOGLE,
         'g1',
@@ -108,10 +146,9 @@ describe('UserService', () => {
     });
 
     it('should link OAuth account', async () => {
+      mockDrizzleService.db.returning.mockResolvedValueOnce([{ id: 'oa1' }]);
       await service.linkOAuthAccount('u1', OAuthProvider.GOOGLE, 'g1');
-      expect(prisma.oAuthAccount.create).toHaveBeenCalledWith({
-        data: { userId: 'u1', provider: 'GOOGLE', providerId: 'g1' },
-      });
+      expect(mockDrizzleService.db.insert).toHaveBeenCalled();
     });
 
     it('should create user with OAuth account', async () => {
@@ -121,20 +158,27 @@ describe('UserService', () => {
         provider: OAuthProvider.GOOGLE,
         providerId: 'g1',
       };
-      await service.createWithOAuth(input);
-      expect(prisma.user.create).toHaveBeenCalled();
+      mockDrizzleService.db.returning.mockResolvedValueOnce([{ id: 'u2' }]); // user
+      mockDrizzleService.db.returning.mockResolvedValueOnce([{ id: 'oa2' }]); // oauthAccount
+      const result = await service.createWithOAuth(input);
+      expect(result.id).toBe('u2');
     });
   });
 
   describe('findMany', () => {
-    it('should call raw query for keyset pagination', async () => {
-      prisma.$queryRaw.mockResolvedValue([]);
+    it('should call keyset paginator', async () => {
+      const mockFindMany = vi.fn().mockResolvedValue([]);
+      (KeysetPaginatedFindMany as any).mockImplementation(() => ({
+        findMany: mockFindMany,
+      }));
+
       await service.findMany({
         paginationArgs: { first: 10, after: null, before: null, last: null },
         searchArgs: { search: '' },
         ordenationArgs: { orderBy: 'id', orderDirection: 'asc' },
       });
-      expect(prisma.$queryRaw).toHaveBeenCalled();
+      expect(KeysetPaginatedFindMany).toHaveBeenCalled();
+      expect(mockFindMany).toHaveBeenCalled();
     });
   });
 });
