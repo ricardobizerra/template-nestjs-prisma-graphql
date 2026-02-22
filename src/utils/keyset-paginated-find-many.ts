@@ -16,19 +16,34 @@ export interface CursorData {
 }
 
 /**
- * Encodes cursor data to a base64 string.
+ * Encodes cursor data to a base64url string.
  */
 export function encodeCursor(data: CursorData): string {
-  return Buffer.from(JSON.stringify(data)).toString('base64');
+  const payload =
+    data.id === data.sortValue ? [data.id] : [data.id, data.sortValue];
+  const stringified = JSON.stringify(payload);
+  return Buffer.from(stringified).toString('base64url');
 }
 
 /**
- * Decodes a base64 cursor string to cursor data.
+ * Decodes a base64 or base64url cursor string to cursor data.
  */
 export function decodeCursor(cursor: string): CursorData | null {
   try {
+    // Decoding using 'base64' properly handles both standard base64 and base64url
     const decoded = Buffer.from(cursor, 'base64').toString('utf-8');
-    return JSON.parse(decoded) as CursorData;
+    const parsed = JSON.parse(decoded);
+
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      return null;
+    }
+
+    const [id, sortValue] = parsed;
+
+    return {
+      id,
+      sortValue: parsed.length === 1 ? id : sortValue,
+    };
   } catch {
     return null;
   }
@@ -95,7 +110,7 @@ export class KeysetPaginatedFindMany<TDatabase extends { id: string }> {
     if (search) {
       const searchConditions = this.config.searchByFields.map(
         (field) =>
-          Prisma.sql`unaccent(${Prisma.raw(String(field))}) ILIKE ${`%${search}%`}`,
+          Prisma.sql`unaccent(${Prisma.raw(String(field))}) ILIKE unaccent(${`%${search}%`})`,
       );
       conditions.push(Prisma.sql`(${Prisma.join(searchConditions, ' OR ')})`);
     }
