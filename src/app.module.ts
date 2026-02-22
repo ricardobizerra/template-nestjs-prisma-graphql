@@ -4,7 +4,7 @@ import { AppController } from '@/app.controller';
 import { AppService } from '@/app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Env, envSchema } from '@/env';
-import { PrismaModule } from '@/lib/prisma/prisma.module';
+import { DrizzleModule } from '@/lib/drizzle/drizzle.module';
 import { HealthModule } from '@/health/health.module';
 import { UserModule } from '@/user/user.module';
 import { RedisModule } from '@/lib/redis/redis.module';
@@ -17,11 +17,7 @@ import { EmailProcessor } from '@/lib/queue/processors/email.processor';
 import { StorageModule } from '@/lib/storage/storage.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { AppLoggerModule, LoggingInterceptor } from '@/lib/logger';
-import {
-  HttpExceptionFilter,
-  PrismaExceptionFilter,
-  PrismaValidationExceptionFilter,
-} from '@/lib/filters';
+import { HttpExceptionFilter } from '@/lib/filters';
 import { BullBoardModule } from '@/lib/bull-board';
 import { IdempotencyModule } from '@/lib/idempotency';
 import { HashingModule } from '@/lib/hashing/hashing.module';
@@ -49,7 +45,7 @@ import { HashingModule } from '@/lib/hashing/hashing.module';
       isGlobal: true,
     }),
     HealthModule,
-    PrismaModule,
+    DrizzleModule,
     UserModule,
     RedisModule,
     AuthModule,
@@ -67,14 +63,6 @@ import { HashingModule } from '@/lib/hashing/hashing.module';
     AppService,
     EmailProcessor,
     // Global exception filters (order matters: most specific first)
-    {
-      provide: APP_FILTER,
-      useClass: PrismaExceptionFilter,
-    },
-    {
-      provide: APP_FILTER,
-      useClass: PrismaValidationExceptionFilter,
-    },
     {
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,

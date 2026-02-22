@@ -7,7 +7,7 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
 import { GoogleStrategy } from './google.strategy';
 import { GitHubStrategy } from './github.strategy';
-import { PrismaModule } from '@/lib/prisma/prisma.module';
+import { DrizzleModule } from '@/lib/drizzle/drizzle.module';
 import { QueueModule } from '@/lib/queue/queue.module';
 import { UserModule } from '@/user/user.module';
 import { Env } from '@/env';
@@ -34,7 +34,7 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
         signOptions: { expiresIn: configService.get('JWT_EXPIRES_IN_SECONDS') },
       }),
     }),
-    PrismaModule,
+    DrizzleModule,
     QueueModule,
     HashingModule,
     forwardRef(() => UserModule),
