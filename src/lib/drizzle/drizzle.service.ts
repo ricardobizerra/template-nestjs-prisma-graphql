@@ -24,6 +24,9 @@ export class DrizzleService implements OnModuleInit, OnModuleDestroy {
     });
 
     this.db = drizzle(this.pool, { schema });
+    
+    // Ensure postgres unaccent extension is installed for searches
+    await this.pool.query('CREATE EXTENSION IF NOT EXISTS "unaccent";');
   }
 
   async onModuleDestroy() {

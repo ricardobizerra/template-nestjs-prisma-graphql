@@ -95,7 +95,7 @@ export class KeysetPaginatedFindMany<TDatabase extends { id: string }> {
     if (search) {
       const searchConditions = this.config.searchByFields.map(
         (field) =>
-          sql`unaccent(${sql.raw(`"${String(field)}"`)}::text) ILIKE ${`%${search}%`}`,
+          sql`unaccent(${sql.raw(`"${String(field)}"`)}::text) ILIKE unaccent(${`%${search}%`})`,
       );
       conditions.push(sql`(${sql.join(searchConditions, sql` OR `)})`);
     }
